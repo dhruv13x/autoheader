@@ -1,0 +1,76 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "autoheader"
+version = "0.1.0"
+description = "Enterprise-grade file header tool that injects repo-relative path headers into Python files"
+readme = "README.md"
+requires-python = ">=3.8"
+
+authors = [
+  { name = "dhruv", email = "dhruv13x@gmail.com" }
+]
+
+license = { text = "MIT © dhruv" }
+
+classifiers = [
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Software Development :: Utilities",
+  "Environment :: Console"
+]
+
+keywords = [
+  "headers",
+  "cli",
+  "utilities",
+  "tooling",
+  "automation",
+  "python-files"
+]
+
+dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/dhruv13x/autoheader"
+Source   = "https://github.com/dhruv13x/autoheader"
+Issues   = "https://github.com/dhruv13x/autoheader/issues"
+
+[project.scripts]
+autoheader = "autoheader.cli:main"
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.0.0",
+  "ruff>=0.6.0",
+  "black>=24.3.0",
+  "mypy>=1.11.0"
+]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py38"
+
+[tool.black]
+line-length = 100
+target-version = ["py38"]
+
+[tool.mypy]
+python_version = "3.8"
+warn_return_any = true
+warn_unused_configs = true
+strict = false
