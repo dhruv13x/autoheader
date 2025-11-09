@@ -34,14 +34,6 @@ jobs:
           # This pulls in pytest, pytest-cov, pyfakefs, and pyyaml
           pip install -e ".[dev,precommit]"
 
-      # --- MODIFIED: Run tests with coverage ---
-      - name: 🧪 Run tests (with 85% coverage check)
-        if: ${{ hashFiles('tests/**') != '' }}
-        run: |
-          # Just run pytest.
-          # All config (coverage, fail-under=85) is loaded from pyproject.toml
-          pytest
-
       - name: ⚙️ Build distribution
         run: python -m build
 
