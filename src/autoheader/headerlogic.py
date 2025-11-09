@@ -4,11 +4,13 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import List
 
-from .constants import ENCODING_RX, HEADER_PREFIX
+from .constants import ENCODING_RX
 
 
-def header_line_for(rel_posix: str) -> str:
-    return f"{HEADER_PREFIX}{rel_posix}"
+# --- MODIFIED ---
+def header_line_for(rel_posix: str, template: str) -> str:
+    """Creates the header line from a template."""
+    return template.format(path=rel_posix)
 
 
 @dataclass
@@ -20,9 +22,12 @@ class HeaderAnalysis:
     has_correct_header: bool
 
 
+# --- MODIFIED ---
 def analyze_header_state(
     lines: List[str],
     expected_header: str,
+    prefix: str,
+    check_encoding: bool  # <-- ADD THIS
 ) -> HeaderAnalysis:
     """
     Pure, testable logic to find header insertion point and check existing state.
@@ -32,25 +37,26 @@ def analyze_header_state(
         return HeaderAnalysis(0, None, False)
 
     i = 0
-    if lines[0].startswith("#!"):
+    # --- MAKE PYTHON-SPECIFIC LOGIC CONDITIONAL ---
+    if check_encoding and lines[0].startswith("#!"):
         i = 1  # Insert after shebang
 
     # Check for encoding cookie on line 1 or 2
-    if i == 0 and ENCODING_RX.match(lines[0]):
-        i = 1
-    elif len(lines) > i and ENCODING_RX.match(lines[i]):
-        i += 1
+    if check_encoding:
+        if i == 0 and ENCODING_RX.match(lines[0]):
+            i = 1
+        elif len(lines) > i and ENCODING_RX.match(lines[i]):
+            i += 1
+    # --- END CONDITIONAL BLOCK ---
 
     # At this point, `i` is the correct insertion index
     insert_index = i
     existing_header = None
     is_correct = False
 
-    if insert_index < len(lines) and lines[insert_index].startswith(HEADER_PREFIX):
+    if insert_index < len(lines) and lines[insert_index].startswith(prefix):
         existing_header = lines[insert_index].strip()
-        # --- THE FIX ---
-        # Check if the existing line *starts with* the expected header
-        # This allows for comments like # src/autoheader/cli.py (Refactored)
+        
         if existing_header.startswith(expected_header):
             is_correct = True
 
@@ -62,7 +68,7 @@ def build_new_lines(
     expected_header: str,
     analysis: HeaderAnalysis,
     override: bool,
-    blank_lines_after: int,  # <-- NEW
+    blank_lines_after: int,
 ) -> List[str]:
     """
     Pure, testable logic to construct the new file content.
@@ -71,8 +77,6 @@ def build_new_lines(
     new_lines = lines[:]
     insert_at = analysis.insert_index
 
-    # Override mode: remove existing header if present
-    # This logic is correct for *override*
     if override and analysis.existing_header_line is not None:
         del new_lines[insert_at]
 

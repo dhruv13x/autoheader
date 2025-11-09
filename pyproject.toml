@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "autoheader"
-version = "1.0.0"
+version = "2.0.0"
 description = "Enterprise-grade file header tool that injects repo-relative path headers into Python files"
 readme = "README.md"
 requires-python = ">=3.8"
@@ -39,7 +39,8 @@ keywords = [
 
 dependencies = [
   "tomli; python_version < '3.11'",
-  "rich>=13.0.0"
+  "rich>=13.0.0",
+  "rich-argparse>=1.0.0"  # <-- ADDED
 ]
 
 [project.urls]
@@ -90,11 +91,11 @@ testpaths = [
     "tests/"
 ]
 addopts = [
-    "-q",                     # Run in quiet mode
-    "--strict-markers",       # Be strict about pytest markers
-    "--cov=src/autoheader",   # Measure coverage on the src package
+    "-q",                  # Run in quiet mode
+    "--strict-markers",    # Be strict about pytest markers
+    "--cov=src/autoheader",  # Measure coverage on the src package
     "--cov-report=term-missing", # Show missing lines in terminal
-    "--cov-fail-under=85",    # Fail build if coverage < 85%
+    "--cov-fail-under=85",   # Fail build if coverage < 85%
 ]
 python_files = "test_*.py"
 python_functions = "test_*"

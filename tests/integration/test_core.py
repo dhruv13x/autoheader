@@ -5,6 +5,22 @@ from pathlib import Path
 
 from autoheader.core import plan_files, write_with_header
 from autoheader.models import PlanItem
+# --- ADD THESE IMPORTS ---
+from autoheader.models import LanguageConfig
+from autoheader.constants import HEADER_PREFIX
+
+# --- ADD DEFAULT LANGUAGE CONFIG FOR TESTS ---
+# Most tests assume the default Python behavior
+DEFAULT_TEMPLATE = f"{HEADER_PREFIX}{{path}}"
+PY_LANG = LanguageConfig(
+    name="python",
+    file_globs=["*.py"],
+    prefix=HEADER_PREFIX,
+    check_encoding=True,
+    template=DEFAULT_TEMPLATE,
+)
+DEFAULT_LANGUAGES = [PY_LANG]
+
 
 # The 'populated_project' fixture is defined in tests/conftest.py
 # and automatically used by pytest.
@@ -14,52 +30,60 @@ def test_plan_files(populated_project: Path):
     Tests the main plan_files orchestrator using the 'populated_project' fixture.
     """
     root = populated_project
-    
+
     # Run the plan
+    # --- MODIFIED: Pass languages argument ---
     plan = plan_files(
         root,
         depth=None,
         excludes=[],
         override=False,
         remove=False,
+        languages=DEFAULT_LANGUAGES,
     )
-    
+    # --- END MODIFIED ---
+
     # Convert to a dict for easy lookup
     plan_map = {item.rel_posix: item.action for item in plan}
-    
+
     # 1. 'src/clean_file.py' should be skipped (header exists)
     assert plan_map["src/clean_file.py"] == "skip-header-exists"
-    
+
     # 2. 'src/dirty_file.py' should be marked for 'add'
     assert plan_map["src/dirty_file.py"] == "add"
-    
+
     # 3. 'src/incorrect_file.py' should be skipped (no --override)
     assert plan_map["src/incorrect_file.py"] == "skip-header-exists"
-    
+
     # 4. '.venv/lib/some_lib.py' should be excluded
     assert plan_map[".venv/lib/some_lib.py"] == "skip-excluded"
-    
+
     # 5. 'src/a/b/c/d/e/deep_file.py' should be marked for 'add'
     assert plan_map["src/a/b/c/d/e/deep_file.py"] == "add"
+
 
 def test_plan_files_with_flags(populated_project: Path):
     """
     Tests the --override, --remove, and --depth flags.
     """
     root = populated_project
-    
+
     # --- Test --override ---
+    # --- MODIFIED: Pass languages argument ---
     plan_override = plan_files(
-        root, depth=None, excludes=[], override=True, remove=False
+        root, depth=None, excludes=[], override=True, remove=False, languages=DEFAULT_LANGUAGES
     )
+    # --- END MODIFIED ---
     plan_map = {item.rel_posix: item.action for item in plan_override}
     # 'src/incorrect_file.py' should now be 'override'
     assert plan_map["src/incorrect_file.py"] == "override"
-    
+
     # --- Test --remove ---
+    # --- MODIFIED: Pass languages argument ---
     plan_remove = plan_files(
-        root, depth=None, excludes=[], override=False, remove=True
+        root, depth=None, excludes=[], override=False, remove=True, languages=DEFAULT_LANGUAGES
     )
+    # --- END MODIFIED ---
     plan_map = {item.rel_posix: item.action for item in plan_remove}
     # 'src/clean_file.py' (which has a header) should be 'remove'
     assert plan_map["src/clean_file.py"] == "remove"
@@ -67,9 +91,11 @@ def test_plan_files_with_flags(populated_project: Path):
     assert plan_map["src/dirty_file.py"] == "skip-header-exists"
 
     # --- Test --depth ---
+    # --- MODIFIED: Pass languages argument ---
     plan_depth = plan_files(
-        root, depth=3, excludes=[], override=False, remove=False
+        root, depth=3, excludes=[], override=False, remove=False, languages=DEFAULT_LANGUAGES
     )
+    # --- END MODIFIED ---
     plan_map = {item.rel_posix: item.action for item in plan_depth}
     # 'src/a/b/c/d/e/deep_file.py' (depth 5) should be excluded
     assert plan_map["src/a/b/c/d/e/deep_file.py"] == "skip-excluded"
@@ -83,54 +109,78 @@ def test_write_with_header_actions(populated_project: Path):
     modifies files on disk.
     """
     root = populated_project
-    
+
     # --- 1. Test "add" action ---
+    # --- MODIFIED: Add language config to PlanItem ---
     item_add = PlanItem(
         path=root / "src/dirty_file.py",
         rel_posix="src/dirty_file.py",
-        action="add"
+        action="add",
+        prefix=PY_LANG.prefix,
+        check_encoding=PY_LANG.check_encoding,
+        template=PY_LANG.template,
     )
+    # --- END MODIFIED ---
+    
+    # --- MODIFIED: Remove prefix argument ---
     result = write_with_header(
         item_add, backup=False, dry_run=False, blank_lines_after=1
     )
+    # --- END MODIFIED ---
     assert result == "add"
-    
+
     # Check file content
     lines = (root / "src/dirty_file.py").read_text().splitlines()
     assert lines[0] == "#!/usr/bin/env python"
     assert lines[1] == "# -*- coding: utf-8 -*-"
-    assert lines[2] == "# src/dirty_file.py" # Header added
-    assert lines[3] == ""                    # Blank line added
-    assert lines[4] == ""                    # Original blank line
+    assert lines[2] == "# src/dirty_file.py"  # Header added
+    assert lines[3] == ""  # Blank line added
+    assert lines[4] == ""  # Original blank line
 
     # --- 2. Test "override" action ---
+    # --- MODIFIED: Add language config to PlanItem ---
     item_override = PlanItem(
         path=root / "src/incorrect_file.py",
         rel_posix="src/incorrect_file.py",
-        action="override"
+        action="override",
+        prefix=PY_LANG.prefix,
+        check_encoding=PY_LANG.check_encoding,
+        template=PY_LANG.template,
     )
+    # --- END MODIFIED ---
+    
+    # --- MODIFIED: Remove prefix argument ---
     result = write_with_header(
         item_override, backup=False, dry_run=False, blank_lines_after=1
     )
+    # --- END MODIFIED ---
     assert result == "override"
-    
+
     # Check file content
     lines = (root / "src/incorrect_file.py").read_text().splitlines()
-    assert lines[0] == "# src/incorrect_file.py" # Header overridden
-    assert lines[1] == ""                        # Blank line added
-    assert lines[2] == ""                        # Original blank line
-    
+    assert lines[0] == "# src/incorrect_file.py"  # Header overridden
+    assert lines[1] == ""  # Blank line added
+    assert lines[2] == ""  # Original blank line
+
     # --- 3. Test "remove" action ---
+    # --- MODIFIED: Add language config to PlanItem ---
     item_remove = PlanItem(
         path=root / "src/clean_file.py",
         rel_posix="src/clean_file.py",
-        action="remove"
+        action="remove",
+        prefix=PY_LANG.prefix,
+        check_encoding=PY_LANG.check_encoding,
+        template=PY_LANG.template,
     )
+    # --- END MODIFIED ---
+    
+    # --- MODIFIED: Remove prefix argument ---
     result = write_with_header(
         item_remove, backup=False, dry_run=False, blank_lines_after=1
     )
+    # --- END MODIFIED ---
     assert result == "remove"
-    
+
     # Check file content
     lines = (root / "src/clean_file.py").read_text().splitlines()
     # Header and blank line should be gone

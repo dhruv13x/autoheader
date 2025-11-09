@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 from pathlib import Path
-from typing import List, Iterable
+from typing import List, Iterable, Tuple
 import logging
+
+# --- ADD THIS ---
+from .models import LanguageConfig
 
 # Use logging instead of print
 log = logging.getLogger(__name__)
@@ -71,11 +74,55 @@ def write_file_content(
         raise
 
 
-def find_python_files(root: Path) -> Iterable[Path]:
-    """Yields all .py files from the root, skipping symlinks."""
-    for path in root.rglob("*.py"):
-        if path.is_symlink():
-            log.debug(f"Skipping symlink: {path}")
-            continue
-        if not path.is_dir():
-            yield path
+def load_gitignore_patterns(root: Path) -> List[str]:
+    """
+    Loads and parses .gitignore patterns from the project root.
+    - Ignores comments (#)
+    - Ignores blank lines
+    - Strips whitespace
+    """
+    gitignore_path = root / ".gitignore"
+    if not gitignore_path.is_file():
+        log.debug("No .gitignore found, skipping.")
+        return []
+
+    patterns: List[str] = []
+    try:
+        with gitignore_path.open("r", encoding="utf-8", errors="replace") as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith("#"):
+                    continue
+                patterns.append(line)
+        log.debug(f"Loaded {len(patterns)} patterns from .gitignore.")
+        return patterns
+    except (IOError, PermissionError) as e:
+        log.warning(f"Could not read {gitignore_path}: {e}")
+        return []
+
+
+# --- REPLACE find_python_files WITH THIS ---
+def find_configured_files(
+    root: Path, languages: List[LanguageConfig]
+) -> Iterable[Tuple[Path, LanguageConfig]]:
+    """
+    Yields all files matching language globs from the root,
+    associating each path with its LanguageConfig.
+    """
+    seen_paths: set[Path] = set()
+    for lang in languages:
+        for glob in lang.file_globs:
+            log.debug(f"Scanning for glob: {glob} (lang: {lang.name})")
+            for path in root.rglob(glob):
+                if path in seen_paths:
+                    continue  # Handled by a higher-priority language
+                
+                seen_paths.add(path)
+
+                if path.is_symlink():
+                    log.debug(f"Skipping symlink: {path}")
+                    continue
+                if not path.is_file():
+                    continue
+                
+                yield path, lang

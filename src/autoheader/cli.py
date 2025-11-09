@@ -8,6 +8,15 @@ import sys
 from typing import List
 import logging
 import importlib.metadata
+import time
+
+# --- ADD THIS ---
+try:
+    from rich_argparse import RichHelpFormatter
+except ImportError:
+    # Fallback for environments where rich-argparse isn't installed
+    RichHelpFormatter = argparse.HelpFormatter  # type: ignore
+# --- END ADD ---
 
 # Add TimeoutError
 from concurrent.futures import ThreadPoolExecutor, as_completed, TimeoutError
@@ -15,11 +24,19 @@ from concurrent.futures import ThreadPoolExecutor, as_completed, TimeoutError
 from . import app
 from . import ui
 from . import config
-from .constants import DEFAULT_EXCLUDES, ROOT_MARKERS
+# --- MODIFIED ---
+from .constants import (
+    DEFAULT_EXCLUDES,
+    ROOT_MARKERS,
+    HEADER_PREFIX,
+    CONFIG_FILE_NAME,  # <-- ADD THIS
+)
 from .core import (
     plan_files,
     write_with_header,
 )
+# --- ADD THIS IMPORT ---
+from . import filesystem
 from .models import PlanItem
 
 # Get the root logger for our application
@@ -39,7 +56,9 @@ def get_version() -> str:
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         prog="autoheader",
-        description="Add a '# <relative/path.py>' header to Python files, safely and repeatably.",
+        description="Add a repo-relative path header to source files, safely and repeatably.",
+        # --- ADD THIS LINE ---
+        formatter_class=RichHelpFormatter,
     )
 
     p.add_argument(
@@ -48,98 +67,107 @@ def build_parser() -> argparse.ArgumentParser:
         version=f"%(prog)s {get_version()}",
     )
 
-    # Dry-run by default; allow explicit --dry-run and --no-dry-run
-    g_dry = p.add_mutually_exclusive_group()
+    # --- REORGANIZED FOR CLEANER HELP PANELS ---
+
+    # --- Main Actions ---
+    g_action = p.add_argument_group("Main Actions")
+    g_dry = g_action.add_mutually_exclusive_group()
     g_dry.add_argument(
         "-d", "--dry-run", dest="dry_run", action="store_true", help="Do not write changes (default)."
     )
     g_dry.add_argument(
         "-nd", "--no-dry-run", dest="dry_run", action="store_false", help="Apply changes to files."
     )
-    p.set_defaults(dry_run=True)
-
-    # --- NEW FEATURE ---
-    # Add mutually exclusive group for override/remove
-    g_action = p.add_mutually_exclusive_group()
-    g_action.add_argument(
+    
+    g_mode = g_action.add_mutually_exclusive_group()
+    g_mode.add_argument(
         "--override",
         action="store_true",
         help="Rewrite existing header lines to fresh, correct ones.",
     )
-    g_action.add_argument(
+    g_mode.add_argument(
         "--remove", action="store_true", help="Remove all autoheader lines from files."
     )
-    
-    # --- NEW: Check/Install Group ---
-    g_ci = p.add_mutually_exclusive_group()
-    g_ci.add_argument(
+
+    # --- CI & Pre-commit ---
+    g_ci = p.add_argument_group("CI / Pre-commit / Init")  # <-- MODIFIED GROUP NAME
+    g_ci_mode = g_ci.add_mutually_exclusive_group()
+    g_ci_mode.add_argument(
         "--check",
         action="store_true",
         help="Exit with code 1 if any file needs header changes (for pre-commit/CI).",
     )
-    g_ci.add_argument(
+    g_ci_mode.add_argument(
         "--install-precommit",
         action="store_true",
         help="Install autoheader as a 'repo: local' pre-commit hook.",
     )
-    # --- END NEW ---
+    # --- ADD THIS ---
+    g_ci_mode.add_argument(
+        "--init",
+        action="store_true",
+        help="Create a default 'autoheader.toml' in the current directory.",
+    )
+    # --- END ADD ---
 
-    p.add_argument(
+    # --- General Behavior ---
+    g_config = p.add_argument_group("General Behavior")
+    g_config.add_argument(
         "-y", "--yes", action="store_true", help="Assume yes to all confirmation prompts."
     )
-    p.add_argument(
-        "--depth", type=int, default=None, help="Max directory depth from root (e.g., 3)."
-    )
-    p.add_argument(
-        "--exclude",
-        action="append",
-        default=[],
-        metavar="GLOB",
-        help="Extra glob(s) to exclude (can repeat). Defaults also exclude common dangerous paths.",
-    )
-    p.add_argument("--backup", action="store_true", help="Create .bak backups before writing.")
-
-    # --- NEW: Verbosity Group ---
-    g_verbosity = p.add_mutually_exclusive_group()
-    g_verbosity.add_argument(
-        "--verbose", "-v", action="count", default=0, help="Increase verbosity. (use -vv for more)."
-    )
-    g_verbosity.add_argument(
-        "--quiet", "-q", action="store_true", help="Suppress informational output; only show errors."
-    )
-    # --- END NEW ---
-
-    # --- NEW: Output Styling Group ---
-    g_output = p.add_argument_group("Output Styling")
-    g_output.add_argument("--no-color", action="store_true", help="Disable colored output.")
-    g_output.add_argument("--no-emoji", action="store_true", help="Disable emoji prefixes.")
-    # --- END NEW ---
-
-    p.add_argument(
+    g_config.add_argument("--backup", action="store_true", help="Create .bak backups before writing.")
+    g_config.add_argument(
         "--root",
         type=Path,
         default=Path.cwd(),
         help="Root directory (default: current working directory).",
     )
-    p.add_argument(
+    g_config.add_argument(
         "--workers",
         type=int,
         default=8,
         help="Number of parallel workers to use (default: 8).",
     )
 
-    # --- NEW: Config-driven args ---
-    p.add_argument(
-        "--blank-lines-after",
-        type=int,
-        help="Number of blank lines to add after the header.",
+    # --- Filtering & Discovery ---
+    g_filter = p.add_argument_group("Filtering & Discovery")
+    g_filter.add_argument(
+        "--depth", type=int, default=None, help="Max directory depth from root (e.g., 3)."
     )
-    p.add_argument(
+    g_filter.add_argument(
+        "--exclude",
+        action="append",
+        default=[],
+        metavar="GLOB",
+        help="Extra glob(s) to exclude (can repeat). Defaults also exclude common dangerous paths.",
+    )
+    g_filter.add_argument(
         "--markers",
         action="append",
         help="Project root markers (overrides TOML and defaults).",
     )
-    # --- END NEW ---
+
+    # --- Header Customization (from TOML) ---
+    g_header = p.add_argument_group("Header Customization (via autoheader.toml)")
+    g_header.add_argument(
+        "--blank-lines-after",
+        type=int,
+        help="Number of blank lines to add after the header. (Config: [header] blank_lines_after)",
+    )
+    
+    # --- Output Styling ---
+    g_output = p.add_argument_group("Output Styling")
+    g_verbosity = g_output.add_mutually_exclusive_group()
+    g_verbosity.add_argument(
+        "--verbose", "-v", action="count", default=0, help="Increase verbosity. (use -vv for more)."
+    )
+    g_verbosity.add_argument(
+        "--quiet", "-q", action="store_true", help="Suppress informational output; only show errors."
+    )
+    g_output.add_argument("--no-color", action="store_true", help="Disable colored output.")
+    g_output.add_argument("--no-emoji", action="store_true", help="Disable emoji prefixes.")
+    
+    # --- END REORGANIZATION ---
 
     return p
 
@@ -163,29 +191,30 @@ def setup_logging(verbosity: int, quiet: bool) -> None:
 
 
 def main(argv: List[str] | None = None) -> int:
+    start_time = time.monotonic()
     parser = build_parser()
 
-    # --- NEW: Config Loading ---
-    # 1. First pass: just to find the --root
+    # --- MODIFIED: Config Loading ---
     temp_args, remaining_argv = parser.parse_known_args(argv)
     root: Path = temp_args.root.resolve()
 
-    # 2. Set defaults from constants *before* TOML
     parser.set_defaults(
         markers=ROOT_MARKERS,
         exclude=[],
-        blank_lines_after=1
+        blank_lines_after=1,
+        # prefix=HEADER_PREFIX  <-- REMOVED
     )
 
-    # 3. Load config from TOML
-    toml_config = config.load_config(root)
+    # Load all TOML data once
+    toml_data, toml_path = config.load_config_data(root)
+    
+    # Load general settings
+    general_config = config.load_general_config(toml_data)
+    parser.set_defaults(**general_config)
 
-    # 4. Set TOML values as new defaults (will be overridden by CLI)
-    parser.set_defaults(**toml_config)
-
-    # 5. Final parse: CLI args override TOML, which overrode constants
+    # Final parse
     args = parser.parse_args(argv)
-    # --- END NEW ---
+    # --- END MODIFIED ---
 
     # --- BUG FIX: Configure Rich Console ---
     ui.console.no_color = args.no_color
@@ -194,6 +223,26 @@ def main(argv: List[str] | None = None) -> int:
 
     # Configure logging as the first step
     setup_logging(args.verbose, args.quiet)
+
+    # --- ADD THIS BLOCK ---
+    # Handle --init flag
+    if args.init:
+        config_path = root / CONFIG_FILE_NAME
+        if config_path.exists():
+            ui.console.print(f"[red]Error: [bold]{CONFIG_FILE_NAME}[/bold] already exists in this directory.[/red]")
+            return 1
+        
+        try:
+            config_content = config.generate_default_config()
+            config_path.write_text(config_content, encoding="utf-8")
+            # --- THIS IS THE FIX ---
+            ui.console.print(f"[green]✅ Created default config at [bold]{config_path}[/bold].[/green]")
+            # --- END FIX ---
+            return 0
+        except Exception as e:
+            ui.console.print(f"[red]Failed to create config file: {e}[/red]")
+            return 1
+    # --- END ADD ---
 
     # --- NEW: Handle pre-commit installation ---
     if args.install_precommit:
@@ -208,6 +257,9 @@ def main(argv: List[str] | None = None) -> int:
             ui.console.print(f"[red]Failed to install pre-commit hook: {e}[/red]")
             return 1
     # --- END NEW ---
+
+    # Load language configs (MOVED after --init check)
+    languages = config.load_language_configs(toml_data, general_config)
 
     # Root confirmation uses the new app orchestrator
     if not app.ensure_root_or_confirm(
@@ -231,14 +283,23 @@ def main(argv: List[str] | None = None) -> int:
     if args.depth is not None:
         log.debug(f"Depth guard = {args.depth}")
 
+    # --- MODIFIED BLOCK ---
+    # Load .gitignore patterns
+    gitignore_excludes = filesystem.load_gitignore_patterns(root)
+
     # Combine default, TOML, and CLI excludes
-    all_excludes = list(DEFAULT_EXCLUDES) + args.exclude
+    all_excludes = list(DEFAULT_EXCLUDES) + gitignore_excludes + args.exclude
     log.debug(f"Default excludes = {sorted(DEFAULT_EXCLUDES)}")
+    if gitignore_excludes:
+        log.debug(f"Loaded excludes from .gitignore = {gitignore_excludes}")
     if args.exclude:
         log.debug(f"Extra excludes (from TOML/CLI) = {args.exclude}")
     log.debug(f"Final full exclude list = {all_excludes}")
+    # --- END MODIFIED BLOCK ---
+    
     log.debug(f"Root markers = {args.markers}")
     log.debug(f"Blank lines after header = {args.blank_lines_after}")
+    # log.debug(f"Header prefix = {args.prefix}") # <-- REMOVED
 
     # 1. PLAN
     log.info(f"Planning changes for {root}...")
@@ -248,6 +309,7 @@ def main(argv: List[str] | None = None) -> int:
         excludes=all_excludes,
         override=args.override,
         remove=args.remove,
+        languages=languages  # <-- MODIFIED
     )
     log.info(f"Plan complete. Found {len(plan)} files.")
 
@@ -278,7 +340,10 @@ def main(argv: List[str] | None = None) -> int:
             ui.console.print("\n[bold]Run 'autoheader --no-dry-run' to fix.[/bold]")
             return 1  # Exit with error
         
-        ui.console.print("[green]✅ autoheader: All headers are correct.[/green]")
+        # --- MODIFIED ---
+        duration = time.monotonic() - start_time
+        ui.console.print(f"[green]✅ autoheader: All headers are correct.[/green] (checked in {duration:.2f}s)")
+        # --- END MODIFIED ---
         return 0  # Exit with success
     # --- END NEW ---
 
@@ -287,6 +352,7 @@ def main(argv: List[str] | None = None) -> int:
 
     with ThreadPoolExecutor(max_workers=args.workers) as executor:
         future_to_item = {
+            # --- MODIFIED: Removed prefix, as it's in the PlanItem ---
             executor.submit(
                 write_with_header,
                 item,
@@ -296,6 +362,7 @@ def main(argv: List[str] | None = None) -> int:
             ): item
             for item in items_to_process
         }
+        # --- END MODIFIED ---
 
         for future in as_completed(future_to_item):
             item = future_to_item[future]
@@ -329,6 +396,12 @@ def main(argv: List[str] | None = None) -> int:
     if args.dry_run:
         ui.console.print(ui.format_dry_run_note())
     # --- END MODIFIED ---
+
+    # --- ADD THIS ---
+    duration = time.monotonic() - start_time
+    if not args.quiet:
+        ui.console.print(f"\n✨ Done in {duration:.2f}s.")
+    # --- END ADD ---
 
     return 0
 

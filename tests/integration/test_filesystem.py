@@ -5,13 +5,18 @@ from pathlib import Path
 import os
 import stat
 import logging
-from unittest import mock # <-- Import mock
+from unittest import mock  # <-- Import mock
 
+# --- MODIFIED IMPORTS ---
 from autoheader.filesystem import (
     read_file_lines,
     write_file_content,
-    find_python_files,
+    find_configured_files,  # <-- Renamed
+    load_gitignore_patterns,  # <-- Added
 )
+from autoheader.models import LanguageConfig  # <-- Added
+# --- END MODIFIED IMPORTS ---
+
 
 # --- test_read_file_lines ---
 
@@ -23,6 +28,7 @@ def test_read_file_lines_valid(tmp_path: Path):
     lines = read_file_lines(p)
     assert lines == ["line 1", "line 2"]
 
+
 def test_read_file_lines_nonexistent(tmp_path: Path, caplog):
     """Tests reading a non-existent file."""
     p = tmp_path / "nonexistent.py"
@@ -33,6 +39,7 @@ def test_read_file_lines_nonexistent(tmp_path: Path, caplog):
     assert lines == []
     assert f"Failed to read {p}" in caplog.text
     assert "No such file or directory" in caplog.text
+
 
 def test_read_file_lines_permission_error(tmp_path: Path, caplog, monkeypatch):
     """Tests reading a file with a PermissionError."""
@@ -52,6 +59,7 @@ def test_read_file_lines_permission_error(tmp_path: Path, caplog, monkeypatch):
     assert f"Failed to read {p}" in caplog.text
     assert "Permission denied" in caplog.text
 
+
 # --- NEW: Test generic exception in read_file_lines ---
 def test_read_file_lines_generic_exception(tmp_path: Path, caplog, monkeypatch):
     """Tests the generic except block in read_file_lines."""
@@ -65,21 +73,20 @@ def test_read_file_lines_generic_exception(tmp_path: Path, caplog, monkeypatch):
 
     # 2. This is the context manager returned by open()
     #    Use MagicMock to create __enter__ and __exit__
-    mock_context_manager = mock.MagicMock() 
+    mock_context_manager = mock.MagicMock()
     # --- END FIX ---
     mock_context_manager.__enter__.return_value = mock_file_object
-    mock_context_manager.__exit__.return_value = None # Must return None
+    mock_context_manager.__exit__.return_value = None  # Must return None
 
     # 3. Mock path.open to return the context manager
     monkeypatch.setattr(Path, "open", lambda *args, **kwargs: mock_context_manager)
-    
 
     with caplog.at_level(logging.ERROR):
         lines = read_file_lines(p)
 
     assert lines == []
     assert "An unexpected error occurred" in caplog.text
-    assert "Unexpected error" in caplog.text # This should now pass
+    assert "Unexpected error" in caplog.text  # This should now pass
 
 
 # --- test_write_file_content ---
@@ -92,6 +99,7 @@ def test_write_file_content_basic(tmp_path: Path):
     write_file_content(p, "new", "original", backup=False, dry_run=False)
 
     assert p.read_text() == "new"
+
 
 def test_write_file_content_backup(tmp_path: Path):
     """Asserts --backup creates a .bak file."""
@@ -107,6 +115,7 @@ def test_write_file_content_backup(tmp_path: Path):
     assert bak_path.exists()
     assert bak_path.read_text() == "original"
 
+
 def test_write_file_content_dry_run(tmp_path: Path):
     """Asserts --dry-run does not write the file."""
     p = tmp_path / "test.py"
@@ -117,6 +126,7 @@ def test_write_file_content_dry_run(tmp_path: Path):
 
     assert p.read_text() == "original"
     assert not bak_path.exists()
+
 
 def test_write_file_content_preserves_permissions(tmp_path: Path):
     """Asserts file permissions are preserved on write."""
@@ -135,6 +145,7 @@ def test_write_file_content_preserves_permissions(tmp_path: Path):
     new_mode = p.stat().st_mode
     assert new_mode == original_mode
 
+
 # --- NEW: Test failure paths for write_file_content ---
 
 def test_write_file_content_stat_fails(tmp_path: Path, monkeypatch, caplog):
@@ -150,6 +161,7 @@ def test_write_file_content_stat_fails(tmp_path: Path, monkeypatch, caplog):
         write_file_content(p, "new", "original", backup=False, dry_run=False)
 
     assert "Failed to read permissions" in caplog.text
+
 
 def test_write_file_content_backup_fails(tmp_path: Path, monkeypatch, caplog):
     """Tests failure when writing the .bak file."""
@@ -168,6 +180,7 @@ def test_write_file_content_backup_fails(tmp_path: Path, monkeypatch, caplog):
     assert "Failed to create backup" in caplog.text
     # Ensure original file is untouched
     assert p.read_text() == "original"
+
 
 def test_write_file_content_write_fails(tmp_path: Path, monkeypatch, caplog):
     """Tests failure when writing the final file."""
@@ -189,20 +202,55 @@ def test_write_file_content_write_fails(tmp_path: Path, monkeypatch, caplog):
         write_file_content(p, "new", "original", backup=True, dry_run=False)
 
     assert "Failed to write file" in caplog.text
-    
+
     # We can check that the mocks were called as expected
-    assert mock_writer.call_count == 2 # 1 for backup, 1 for main file
-    
+    assert mock_writer.call_count == 2  # 1 for backup, 1 for main file
+
     # original_mode (from stat) + bak.chmod
-    assert mock_chmod.call_count == 1 # Only the bak.chmod is called
+    assert mock_chmod.call_count == 1  # Only the bak.chmod is called
 
 
-# --- test_find_python_files ---
-
-def test_find_python_files(tmp_path: Path):
+# --- ADD THIS NEW TEST ---
+def test_load_gitignore_patterns(tmp_path: Path, caplog):
+    """Tests that .gitignore is parsed correctly."""
+    gitignore = tmp_path / ".gitignore"
+    content = """
+    # This is a comment
+    *.log
+    
+    /build/
+    dist
+    
+    !important.log
     """
-    Tests that only valid, non-symlinked .py files are found.
+    gitignore.write_text(content)
+
+    # --- THIS IS THE FIX ---
+    with caplog.at_level(logging.DEBUG):
+        patterns = load_gitignore_patterns(tmp_path)
+        assert patterns == ["*.log", "/build/", "dist", "!important.log"]
+        assert "Loaded 4 patterns" in caplog.text
+
+        # Test no file
+        gitignore.unlink()
+        patterns = load_gitignore_patterns(tmp_path)
+        assert patterns == []
+        assert "No .gitignore found" in caplog.text
+    # --- END FIX ---
+
+
+# --- MODIFIED: test_find_python_files -> test_find_configured_files ---
+
+def test_find_configured_files(tmp_path: Path):
     """
+    Tests that only valid, non-symlinked files are found
+    based on the multi-language config.
+    """
+    # Define test languages
+    lang_py = LanguageConfig("py", ["*.py", "*.pyi"], "#", True, "# {path}")
+    lang_js = LanguageConfig("js", ["*.js"], "//", False, "// {path}")
+    languages = [lang_py, lang_js]
+
     # Create files
     py_file_1 = tmp_path / "script.py"
     py_file_1.write_text("")
@@ -210,13 +258,19 @@ def test_find_python_files(tmp_path: Path):
     py_file_2 = tmp_path / "src" / "main.py"
     (tmp_path / "src").mkdir()
     py_file_2.write_text("")
+    
+    js_file = tmp_path / "src" / "app.js"
+    js_file.write_text("")
 
     # Create files to be ignored
     txt_file = tmp_path / "README.txt"
     txt_file.write_text("")
 
-    dir_with_py_suffix = tmp_path / "fake.py" # A directory
+    dir_with_py_suffix = tmp_path / "fake.py"  # A directory
     dir_with_py_suffix.mkdir()
+    
+    dir_with_js_suffix = tmp_path / "fake.js" # A directory
+    dir_with_js_suffix.mkdir()
 
     # Create a symlink (to be ignored)
     symlink_file = tmp_path / "linked.py"
@@ -227,8 +281,28 @@ def test_find_python_files(tmp_path: Path):
         # Symlinks may fail on some systems (e.g., Windows without admin)
         symlink_created = False
         print("Skipping symlink test; could not create symlink.")
+
+    # --- Run the test ---
+    found_files = list(find_configured_files(tmp_path, languages))
     
+    # --- Check the results ---
+    found_map = {path: lang for path, lang in found_files}
     
-    found_files = set(find_python_files(tmp_path))
+    assert len(found_map) == 3
     
-    expected = {py_file_1, py_file_2}
+    # Check Python files
+    assert py_file_1 in found_map
+    assert found_map[py_file_1] == lang_py
+    assert py_file_2 in found_map
+    assert found_map[py_file_2] == lang_py
+    
+    # Check JavaScript file
+    assert js_file in found_map
+    assert found_map[js_file] == lang_js
+
+    # Check ignored files
+    assert txt_file not in found_map
+    assert dir_with_py_suffix not in found_map
+    assert dir_with_js_suffix not in found_map
+    if symlink_created:
+        assert symlink_file not in found_map

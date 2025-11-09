@@ -36,3 +36,7 @@ MAX_FILE_SIZE_BYTES = 10_000_000
 
 # NEW: Config file name
 CONFIG_FILE_NAME = "autoheader.toml"
+
+# --- ADD THIS ---
+# NEW: Inline ignore comment
+INLINE_IGNORE_COMMENT = "autoheader: ignore"

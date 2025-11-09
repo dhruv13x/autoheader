@@ -5,11 +5,16 @@ from pathlib import Path
 from typing import List
 import logging
 
-from .models import PlanItem
-from .constants import MAX_FILE_SIZE_BYTES
+# --- MODIFIED ---
+from .models import PlanItem, LanguageConfig
+from .constants import MAX_FILE_SIZE_BYTES, INLINE_IGNORE_COMMENT
+# --- END MODIFIED ---
 from . import filters
 from . import headerlogic
 from . import filesystem
+from . import ui
+from rich.progress import track
+
 
 log = logging.getLogger(__name__)
 
@@ -21,6 +26,8 @@ def plan_files(
     excludes: List[str],
     override: bool,
     remove: bool,
+    # --- MODIFIED ---
+    languages: List[LanguageConfig]
 ) -> List[PlanItem]:
     """
     Plan all actions to be taken. This is now an orchestrator
@@ -28,67 +35,114 @@ def plan_files(
     """
     out: List[PlanItem] = []
 
-    for path in filesystem.find_python_files(root):
+    # --- MODIFIED ---
+    file_iterator = filesystem.find_configured_files(root, languages)
+
+    for path, lang in track(
+        file_iterator,
+        description="Planning files...",
+        console=ui.console,
+        disable=ui.console.quiet,
+        transient=True,
+    ):
+    # --- END MODIFIED ---
         rel_posix = path.relative_to(root).as_posix()
 
         if filters.is_excluded(path, root, excludes):
-            out.append(PlanItem(path, rel_posix, "skip-excluded"))
+            # Pass lang config to PlanItem
+            out.append(PlanItem(path, rel_posix, "skip-excluded", 
+                                prefix=lang.prefix, 
+                                check_encoding=lang.check_encoding, 
+                                template=lang.template))
             continue
 
         if not filters.within_depth(path, root, depth):
-            out.append(PlanItem(path, rel_posix, "skip-excluded", reason="depth"))
+            out.append(PlanItem(path, rel_posix, "skip-excluded", reason="depth",
+                                prefix=lang.prefix, 
+                                check_encoding=lang.check_encoding, 
+                                template=lang.template))
             continue
 
-        # NEW: File Size Check
         try:
             file_size = path.stat().st_size
             if file_size > MAX_FILE_SIZE_BYTES:
                 reason = f"file size ({file_size}b) exceeds limit"
-                out.append(PlanItem(path, rel_posix, "skip-excluded", reason=reason))
+                out.append(PlanItem(path, rel_posix, "skip-excluded", reason=reason,
+                                    prefix=lang.prefix, 
+                                    check_encoding=lang.check_encoding, 
+                                    template=lang.template))
                 continue
         except (IOError, PermissionError) as e:
             log.warning(f"Could not stat file {path}: {e}")
-            out.append(PlanItem(path, rel_posix, "skip-excluded", reason=f"stat failed: {e}"))
+            out.append(PlanItem(path, rel_posix, "skip-excluded", reason=f"stat failed: {e}",
+                                prefix=lang.prefix, 
+                                check_encoding=lang.check_encoding, 
+                                template=lang.template))
             continue
 
-        # Read lines (this is now safe, as we've size-checked)
         lines = filesystem.read_file_lines(path)
 
-        expected = headerlogic.header_line_for(rel_posix)
-        analysis = headerlogic.analyze_header_state(lines, expected)
+        is_ignored = False
+        for line in lines:
+            if INLINE_IGNORE_COMMENT in line:
+                is_ignored = True
+                break
+        
+        if is_ignored:
+            out.append(PlanItem(path, rel_posix, "skip-excluded", reason="inline ignore",
+                                prefix=lang.prefix, 
+                                check_encoding=lang.check_encoding, 
+                                template=lang.template))
+            continue
 
-        # --- NEW LOGIC ---
-        # Handle "remove" action first, as it takes precedence
+        # --- MODIFIED ---
+        expected = headerlogic.header_line_for(rel_posix, lang.template)
+        analysis = headerlogic.analyze_header_state(
+            lines, expected, lang.prefix, lang.check_encoding
+        )
+        # --- END MODIFIED ---
+
         if remove:
             if analysis.existing_header_line is not None:
-                out.append(PlanItem(path, rel_posix, "remove"))
+                out.append(PlanItem(path, rel_posix, "remove",
+                                    prefix=lang.prefix, 
+                                    check_encoding=lang.check_encoding, 
+                                    template=lang.template))
             else:
                 out.append(
-                    PlanItem(path, rel_posix, "skip-header-exists", reason="no-header-to-remove")
+                    PlanItem(path, rel_posix, "skip-header-exists", reason="no-header-to-remove",
+                             prefix=lang.prefix, 
+                             check_encoding=lang.check_encoding, 
+                             template=lang.template)
                 )
             continue
 
-        # --- EXISTING LOGIC (from bug fix) ---
         if analysis.has_correct_header:
-            # Case 1: Header is correct. Skip.
-            out.append(PlanItem(path, rel_posix, "skip-header-exists"))
+            out.append(PlanItem(path, rel_posix, "skip-header-exists",
+                                prefix=lang.prefix, 
+                                check_encoding=lang.check_encoding, 
+                                template=lang.template))
             continue
 
         if analysis.existing_header_line is None:
-            # Case 2: No header exists. Add one.
-            out.append(PlanItem(path, rel_posix, "add"))
+            out.append(PlanItem(path, rel_posix, "add",
+                                prefix=lang.prefix, 
+                                check_encoding=lang.check_encoding, 
+                                template=lang.template))
             continue
 
-        # Case 3: Header exists, but it's incorrect.
         if override:
-            # Action: Override it.
-            out.append(PlanItem(path, rel_posix, "override"))
+            out.append(PlanItem(path, rel_posix, "override",
+                                prefix=lang.prefix, 
+                                check_encoding=lang.check_encoding, 
+                                template=lang.template))
         else:
-            # Action: Skip it. We don't override unless asked.
-            # This prevents the duplication bug.
             out.append(
                 PlanItem(
-                    path, rel_posix, "skip-header-exists", reason="incorrect-header-no-override"
+                    path, rel_posix, "skip-header-exists", reason="incorrect-header-no-override",
+                    prefix=lang.prefix, 
+                    check_encoding=lang.check_encoding, 
+                    template=lang.template
                 )
             )
 
@@ -97,10 +151,11 @@ def plan_files(
 
 def write_with_header(
     item: PlanItem,
-    *,  # Force keyword arguments for flags
+    *,
     backup: bool,
     dry_run: bool,
-    blank_lines_after: int,  # <-- NEW
+    blank_lines_after: int,
+    # --- prefix: str is no longer needed ---
 ) -> str:
     """
     Execute the write/remove action for a single PlanItem.
@@ -108,14 +163,20 @@ def write_with_header(
     """
     path = item.path
     rel_posix = item.rel_posix
-    expected = headerlogic.header_line_for(rel_posix)
+    
+    # --- MODIFIED: Get config from the item ---
+    expected = headerlogic.header_line_for(rel_posix, item.template)
+    # --- END MODIFIED ---
 
     original_lines = filesystem.read_file_lines(path)
     original_content = "\n".join(original_lines) + "\n"
 
-    analysis = headerlogic.analyze_header_state(original_lines, expected)
+    # --- MODIFIED ---
+    analysis = headerlogic.analyze_header_state(
+        original_lines, expected, item.prefix, item.check_encoding
+    )
+    # --- END MODIFIED ---
 
-    # --- UPDATED LOGIC ---
     if item.action == "remove":
         new_lines = headerlogic.build_removed_lines(
             original_lines,
@@ -127,13 +188,11 @@ def write_with_header(
             expected,
             analysis,
             override=(item.action == "override"),
-            blank_lines_after=blank_lines_after,  # <-- PASS
+            blank_lines_after=blank_lines_after,
         )
 
-    # Rebuild file text
     new_text = "\n".join(new_lines) + "\n"
 
-    # This call will now re-raise exceptions if it fails
     filesystem.write_file_content(
         path,
         new_text,
