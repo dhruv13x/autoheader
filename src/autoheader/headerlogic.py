@@ -1,3 +1,5 @@
+# src/autoheader/headerlogic.py
+
 from __future__ import annotations
 from dataclasses import dataclass
 from typing import List
@@ -60,6 +62,7 @@ def build_new_lines(
     expected_header: str,
     analysis: HeaderAnalysis,
     override: bool,
+    blank_lines_after: int,  # <-- NEW
 ) -> List[str]:
     """
     Pure, testable logic to construct the new file content.
@@ -73,9 +76,12 @@ def build_new_lines(
     if override and analysis.existing_header_line is not None:
         del new_lines[insert_at]
 
-    # Insert header + one blank line after it
+    # Insert header
     new_lines.insert(insert_at, expected_header)
-    new_lines.insert(insert_at + 1, "")
+
+    # Insert N blank lines after it
+    for i in range(blank_lines_after):
+        new_lines.insert(insert_at + 1 + i, "")
 
     return new_lines
 

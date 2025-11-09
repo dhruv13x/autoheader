@@ -1,10 +1,12 @@
+# src/autoheader/core.py
+
 from __future__ import annotations
 from pathlib import Path
 from typing import List
 import logging
 
 from .models import PlanItem
-from .constants import MAX_FILE_SIZE_BYTES  # Import new constant
+from .constants import MAX_FILE_SIZE_BYTES
 from . import filters
 from . import headerlogic
 from . import filesystem
@@ -18,7 +20,7 @@ def plan_files(
     depth: int | None,
     excludes: List[str],
     override: bool,
-    remove: bool,  # <-- NEW
+    remove: bool,
 ) -> List[PlanItem]:
     """
     Plan all actions to be taken. This is now an orchestrator
@@ -98,6 +100,7 @@ def write_with_header(
     *,  # Force keyword arguments for flags
     backup: bool,
     dry_run: bool,
+    blank_lines_after: int,  # <-- NEW
 ) -> str:
     """
     Execute the write/remove action for a single PlanItem.
@@ -124,6 +127,7 @@ def write_with_header(
             expected,
             analysis,
             override=(item.action == "override"),
+            blank_lines_after=blank_lines_after,  # <-- PASS
         )
 
     # Rebuild file text

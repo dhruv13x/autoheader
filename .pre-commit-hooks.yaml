@@ -1,0 +1,8 @@
+# .pre-commit-hooks.yaml
+- id: autoheader
+  name: autoheader file header checker
+  description: "Adds or refreshes repo-relative path headers to Python files."
+  entry: autoheader --check
+  language: python
+  types: [python]
+  pass_filenames: false

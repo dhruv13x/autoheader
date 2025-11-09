@@ -1,3 +1,5 @@
+# src/autoheader/constants.py
+
 from __future__ import annotations
 import re
 
@@ -31,3 +33,6 @@ ROOT_MARKERS = [
 
 # NEW: Add a file size limit to prevent resource exhaustion (10MB)
 MAX_FILE_SIZE_BYTES = 10_000_000
+
+# NEW: Config file name
+CONFIG_FILE_NAME = "autoheader.toml"
