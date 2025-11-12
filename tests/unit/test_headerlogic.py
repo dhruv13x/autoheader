@@ -10,6 +10,8 @@ from autoheader.headerlogic import (
 )
 # --- ADD THIS ---
 from autoheader.constants import HEADER_PREFIX
+import datetime
+from unittest.mock import patch
 
 # --- Fixtures for common inputs ---
 
@@ -27,6 +29,15 @@ LINES_ENCODING = ["# -*- coding: utf-8 -*-"]
 LINES_CODE = ["import os", "", "print('hello')"]
 LINES_CORRECT_HEADER = [EXPECTED_HEADER, "", *LINES_CODE]
 LINES_INCORRECT_HEADER = ["# src/old.py", "", *LINES_CODE]
+
+
+def test_header_line_for():
+    """Tests the header_line_for function with all template variables."""
+    template = "Copyright (c) {year} {filename} | {path}"
+    with patch("autoheader.headerlogic.datetime") as mock_datetime:
+        mock_datetime.datetime.now.return_value = datetime.datetime(2025, 1, 1)
+        result = header_line_for("src/utils/parser.py", template)
+        assert result == "Copyright (c) 2025 parser.py | src/utils/parser.py"
 
 
 # --- Phase 1: test_analyze_header_state ---

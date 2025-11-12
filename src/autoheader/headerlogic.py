@@ -3,6 +3,8 @@
 from __future__ import annotations
 from dataclasses import dataclass
 from typing import List
+import datetime
+from pathlib import Path
 
 from .constants import ENCODING_RX
 
@@ -10,7 +12,11 @@ from .constants import ENCODING_RX
 # --- MODIFIED ---
 def header_line_for(rel_posix: str, template: str) -> str:
     """Creates the header line from a template."""
-    return template.format(path=rel_posix)
+    return template.format(
+        path=rel_posix,
+        filename=Path(rel_posix).name,
+        year=datetime.datetime.now().year,
+    )
 
 
 @dataclass
