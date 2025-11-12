@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 from pathlib import Path
-from typing import List
+from typing import List, Tuple
 import logging
 
 # --- MODIFIED ---
@@ -28,12 +28,15 @@ def plan_files(
     remove: bool,
     # --- MODIFIED ---
     languages: List[LanguageConfig]
-) -> List[PlanItem]:
+) -> Tuple[List[PlanItem], dict]:
     """
     Plan all actions to be taken. This is now an orchestrator
     and does not contain any I/O logic itself.
     """
     out: List[PlanItem] = []
+    use_cache = not override and not remove
+    cache = filesystem.load_cache(root) if use_cache else {}
+    new_cache = {}
 
     # --- MODIFIED ---
     file_iterator = filesystem.find_configured_files(root, languages)
@@ -64,7 +67,9 @@ def plan_files(
             continue
 
         try:
-            file_size = path.stat().st_size
+            stat = path.stat()
+            mtime = stat.st_mtime
+            file_size = stat.st_size
             if file_size > MAX_FILE_SIZE_BYTES:
                 reason = f"file size ({file_size}b) exceeds limit"
                 out.append(PlanItem(path, rel_posix, "skip-excluded", reason=reason,
@@ -80,7 +85,17 @@ def plan_files(
                                 template=lang.template))
             continue
 
+        if rel_posix in cache and cache[rel_posix]["mtime"] == mtime:
+            out.append(PlanItem(path, rel_posix, "skip-cached",
+                                prefix=lang.prefix,
+                                check_encoding=lang.check_encoding,
+                                template=lang.template))
+            new_cache[rel_posix] = cache[rel_posix]
+            continue
+
         lines = filesystem.read_file_lines(path)
+        file_hash = filesystem.get_file_hash(lines)
+        new_cache[rel_posix] = {"mtime": mtime, "hash": file_hash}
 
         is_ignored = False
         for line in lines:
@@ -146,7 +161,7 @@ def plan_files(
                 )
             )
 
-    return out
+    return out, new_cache
 
 
 def write_with_header(
@@ -156,7 +171,7 @@ def write_with_header(
     dry_run: bool,
     blank_lines_after: int,
     # --- prefix: str is no longer needed ---
-) -> str:
+) -> Tuple[str, float, str]:
     """
     Execute the write/remove action for a single PlanItem.
     Orchestrates reading, logic, and writing.
@@ -201,4 +216,7 @@ def write_with_header(
         dry_run=dry_run,
     )
 
-    return item.action
+    new_mtime = path.stat().st_mtime
+    new_hash = filesystem.get_file_hash(new_lines)
+
+    return item.action, new_mtime, new_hash

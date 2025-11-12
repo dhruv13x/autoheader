@@ -4,6 +4,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import List, Iterable, Tuple
 import logging
+import json
+import hashlib
 
 # --- ADD THIS ---
 from .models import LanguageConfig
@@ -99,6 +101,35 @@ def load_gitignore_patterns(root: Path) -> List[str]:
     except (IOError, PermissionError) as e:
         log.warning(f"Could not read {gitignore_path}: {e}")
         return []
+
+
+def get_file_hash(lines: List[str]) -> str:
+    """Calculates the SHA256 hash of file content."""
+    content = "\n".join(lines).encode("utf-8")
+    return hashlib.sha256(content).hexdigest()
+
+
+def load_cache(root: Path) -> dict:
+    """Loads the cache file from the project root."""
+    cache_path = root / ".autoheader_cache"
+    if not cache_path.is_file():
+        return {}
+    try:
+        with cache_path.open("r", encoding="utf-8") as f:
+            return json.load(f)
+    except (IOError, json.JSONDecodeError) as e:
+        log.warning(f"Could not load cache file: {e}")
+        return {}
+
+
+def save_cache(root: Path, cache: dict):
+    """Saves the cache to the project root."""
+    cache_path = root / ".autoheader_cache"
+    try:
+        with cache_path.open("w", encoding="utf-8") as f:
+            json.dump(cache, f)
+    except IOError as e:
+        log.warning(f"Could not save cache file: {e}")
 
 
 # --- REPLACE find_python_files WITH THIS ---

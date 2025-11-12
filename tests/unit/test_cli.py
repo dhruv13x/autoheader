@@ -46,7 +46,7 @@ def test_main_handles_timeout_error(tmp_path: Path):
     plan_item = PlanItem(action="add", path=tmp_path / "a.py", rel_posix="a.py", prefix="#", check_encoding=False, template="{prefix} {path}")
     future = Future()
     future.set_exception(TimeoutError)
-    with patch("autoheader.app.ensure_root_or_confirm", return_value=True), patch("autoheader.cli.plan_files", return_value=[plan_item]), patch("concurrent.futures.as_completed", return_value=[future]), patch("autoheader.ui.format_error") as mock_format_error, patch("autoheader.ui.console.print"):
+    with patch("autoheader.app.ensure_root_or_confirm", return_value=True), patch("autoheader.cli.plan_files", return_value=([plan_item], {})), patch("concurrent.futures.as_completed", return_value=[future]), patch("autoheader.ui.format_error") as mock_format_error, patch("autoheader.ui.console.print"):
         cli.main(["--no-dry-run", "--yes", "--root", str(tmp_path)])
         mock_format_error.assert_called_once()
 
@@ -56,7 +56,7 @@ def test_main_handles_generic_exception(tmp_path: Path):
     plan_item = PlanItem(action="add", path=tmp_path / "a.py", rel_posix="a.py", prefix="#", check_encoding=False, template="{prefix} {path}")
     future = Future()
     future.set_exception(Exception("Disk full"))
-    with patch("autoheader.app.ensure_root_or_confirm", return_value=True), patch("autoheader.cli.plan_files", return_value=[plan_item]), patch("concurrent.futures.as_completed", return_value=[future]), patch("autoheader.ui.format_error") as mock_format_error, patch("autoheader.ui.console.print"):
+    with patch("autoheader.app.ensure_root_or_confirm", return_value=True), patch("autoheader.cli.plan_files", return_value=([plan_item], {})), patch("concurrent.futures.as_completed", return_value=[future]), patch("autoheader.ui.format_error") as mock_format_error, patch("autoheader.ui.console.print"):
         cli.main(["--no-dry-run", "--yes", "--root", str(tmp_path)])
         mock_format_error.assert_called_once()
 

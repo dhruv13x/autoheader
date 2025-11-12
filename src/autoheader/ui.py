@@ -17,6 +17,7 @@ EMOJI_MAP = {
     "REMOVE": "❌",
     "SKIP": "🔵",
     "SKIP_EXCLUDED": "⚫",
+    "SKIP_CACHED": "⚡️",
     "ERROR": "🔥",
 }
 
@@ -26,6 +27,7 @@ STYLE_MAP = {
     "REMOVE": "red",
     "SKIP": "cyan",
     "SKIP_EXCLUDED": "bright_black",
+    "SKIP_CACHED": "blue",
     "ERROR": "bold red",
     "DRY_RUN": "bright_black",
 }
@@ -60,7 +62,7 @@ def format_error(rel_path: str, err: Exception, no_emoji: bool) -> str:
 
 def format_summary(
     added: int, overridden: int, removed: int,
-    skipped_ok: int, skipped_excluded: int
+    skipped_ok: int, skipped_excluded: int, skipped_cached: int
 ) -> str:
     """Formats the final summary line."""
     parts = [
@@ -69,6 +71,7 @@ def format_summary(
         f"[{STYLE_MAP['REMOVE']}]removed={removed}[/{STYLE_MAP['REMOVE']}]",
         f"[{STYLE_MAP['SKIP']}]skipped_ok={skipped_ok}[/{STYLE_MAP['SKIP']}]",
         f"[{STYLE_MAP['SKIP_EXCLUDED']}]skipped_excluded={skipped_excluded}[/{STYLE_MAP['SKIP_EXCLUDED']}]",
+        f"[{STYLE_MAP['SKIP_CACHED']}]skipped_cached={skipped_cached}[/{STYLE_MAP['SKIP_CACHED']}]",
     ]
     return f"\nSummary: {', '.join(parts)}."
 

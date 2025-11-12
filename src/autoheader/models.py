@@ -21,7 +21,7 @@ class LanguageConfig:
 class PlanItem:
     path: Path
     rel_posix: str
-    action: str  # "skip-excluded" | "skip-header-exists" | "add" | "override" | "remove"
+    action: str  # "skip-excluded" | "skip-header-exists" | "add" | "override" | "remove" | "skip-cached"
     
     # --- ADD THESE ---
     # Config needed by the execution (write) phase

@@ -33,7 +33,7 @@ def test_plan_files(populated_project: Path):
 
     # Run the plan
     # --- MODIFIED: Pass languages argument ---
-    plan = plan_files(
+    plan, _ = plan_files(
         root,
         depth=None,
         excludes=[],
@@ -70,7 +70,7 @@ def test_plan_files_with_flags(populated_project: Path):
 
     # --- Test --override ---
     # --- MODIFIED: Pass languages argument ---
-    plan_override = plan_files(
+    plan_override, _ = plan_files(
         root, depth=None, excludes=[], override=True, remove=False, languages=DEFAULT_LANGUAGES
     )
     # --- END MODIFIED ---
@@ -80,7 +80,7 @@ def test_plan_files_with_flags(populated_project: Path):
 
     # --- Test --remove ---
     # --- MODIFIED: Pass languages argument ---
-    plan_remove = plan_files(
+    plan_remove, _ = plan_files(
         root, depth=None, excludes=[], override=False, remove=True, languages=DEFAULT_LANGUAGES
     )
     # --- END MODIFIED ---
@@ -92,7 +92,7 @@ def test_plan_files_with_flags(populated_project: Path):
 
     # --- Test --depth ---
     # --- MODIFIED: Pass languages argument ---
-    plan_depth = plan_files(
+    plan_depth, _ = plan_files(
         root, depth=3, excludes=[], override=False, remove=False, languages=DEFAULT_LANGUAGES
     )
     # --- END MODIFIED ---
@@ -123,11 +123,11 @@ def test_write_with_header_actions(populated_project: Path):
     # --- END MODIFIED ---
     
     # --- MODIFIED: Remove prefix argument ---
-    result = write_with_header(
+    action, _, _ = write_with_header(
         item_add, backup=False, dry_run=False, blank_lines_after=1
     )
     # --- END MODIFIED ---
-    assert result == "add"
+    assert action == "add"
 
     # Check file content
     lines = (root / "src/dirty_file.py").read_text().splitlines()
@@ -150,11 +150,11 @@ def test_write_with_header_actions(populated_project: Path):
     # --- END MODIFIED ---
     
     # --- MODIFIED: Remove prefix argument ---
-    result = write_with_header(
+    action, _, _ = write_with_header(
         item_override, backup=False, dry_run=False, blank_lines_after=1
     )
     # --- END MODIFIED ---
-    assert result == "override"
+    assert action == "override"
 
     # Check file content
     lines = (root / "src/incorrect_file.py").read_text().splitlines()
@@ -175,11 +175,11 @@ def test_write_with_header_actions(populated_project: Path):
     # --- END MODIFIED ---
     
     # --- MODIFIED: Remove prefix argument ---
-    result = write_with_header(
+    action, _, _ = write_with_header(
         item_remove, backup=False, dry_run=False, blank_lines_after=1
     )
     # --- END MODIFIED ---
-    assert result == "remove"
+    assert action == "remove"
 
     # Check file content
     lines = (root / "src/clean_file.py").read_text().splitlines()

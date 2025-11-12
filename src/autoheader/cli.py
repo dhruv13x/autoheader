@@ -303,7 +303,7 @@ def main(argv: List[str] | None = None) -> int:
 
     # 1. PLAN
     log.info(f"Planning changes for {root}...")
-    plan = plan_files(
+    plan, new_cache = plan_files(
         root,
         depth=args.depth,
         excludes=all_excludes,
@@ -318,6 +318,7 @@ def main(argv: List[str] | None = None) -> int:
     overridden = 0
     skipped_exists = 0
     skipped_excluded = 0
+    skipped_cached = 0
     removed = 0
     items_to_process: List[PlanItem] = []
 
@@ -328,6 +329,9 @@ def main(argv: List[str] | None = None) -> int:
         elif item.action == "skip-header-exists":
             skipped_exists += 1
             log.debug(f"SKIP (ok):   {item.rel_posix} [reason: {item.reason or 'header ok'}]")
+        elif item.action == "skip-cached":
+            skipped_cached += 1
+            log.debug(f"SKIP (cached): {item.rel_posix}")
         else:
             items_to_process.append(item)
 
@@ -369,7 +373,8 @@ def main(argv: List[str] | None = None) -> int:
             rel = item.rel_posix
             try:
                 # --- MODIFIED: Use Rich Output ---
-                action_done = future.result(timeout=60.0)
+                action_done, new_mtime, new_hash = future.result(timeout=60.0)
+                new_cache[rel] = {"mtime": new_mtime, "hash": new_hash}
 
                 if action_done == "override":
                     overridden += 1
@@ -388,10 +393,13 @@ def main(argv: List[str] | None = None) -> int:
                 ui.console.print(ui.format_error(rel, e, args.no_emoji))
             # --- END MODIFIED ---
 
+    if not args.dry_run:
+        filesystem.save_cache(root, new_cache)
+
     # 4. REPORT
     # --- MODIFIED: Use Rich Output ---
     ui.console.print(
-        ui.format_summary(added, overridden, removed, skipped_exists, skipped_excluded)
+        ui.format_summary(added, overridden, removed, skipped_exists, skipped_excluded, skipped_cached)
     )
     if args.dry_run:
         ui.console.print(ui.format_dry_run_note())
