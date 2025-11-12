@@ -128,6 +128,13 @@ def build_parser() -> argparse.ArgumentParser:
         default=8,
         help="Number of parallel workers to use (default: 8).",
     )
+    # --- ADD THIS ---
+    g_config.add_argument(
+        "--timeout",
+        type=float,
+        help="Timeout in seconds for processing a single file. (Config: [general] timeout)",
+    )
+    # --- END ADD ---
 
     # --- Filtering & Discovery ---
     g_filter = p.add_argument_group("Filtering & Discovery")
@@ -202,6 +209,7 @@ def main(argv: List[str] | None = None) -> int:
         markers=ROOT_MARKERS,
         exclude=[],
         blank_lines_after=1,
+        timeout=60.0,  # <-- ADD DEFAULT HERE
         # prefix=HEADER_PREFIX  <-- REMOVED
     )
 
@@ -299,6 +307,7 @@ def main(argv: List[str] | None = None) -> int:
     
     log.debug(f"Root markers = {args.markers}")
     log.debug(f"Blank lines after header = {args.blank_lines_after}")
+    log.debug(f"Processing timeout = {args.timeout}s")  # <-- ADD LOGGING
     # log.debug(f"Header prefix = {args.prefix}") # <-- REMOVED
 
     # 1. PLAN
@@ -373,8 +382,8 @@ def main(argv: List[str] | None = None) -> int:
             item = future_to_item[future]
             rel = item.rel_posix
             try:
-                # --- MODIFIED: Use Rich Output ---
-                action_done, new_mtime, new_hash = future.result(timeout=60.0)
+                # --- MODIFIED: Use Rich Output and configurable timeout ---
+                action_done, new_mtime, new_hash = future.result(timeout=args.timeout)
                 new_cache[rel] = {"mtime": new_mtime, "hash": new_hash}
 
                 if action_done == "override":

@@ -45,7 +45,8 @@ def load_general_config(toml_data: Dict[str, Any]) -> Dict[str, Any]:
     # [general] section
     if "general" in toml_data and isinstance(toml_data["general"], dict):
         general = toml_data["general"]
-        for key in ["dry_run", "backup", "workers", "yes", "override", "remove"]:
+        # --- MODIFIED: Added 'timeout' to the list of keys ---
+        for key in ["dry_run", "backup", "workers", "yes", "override", "remove", "timeout"]:
             if key in general:
                 flat_config[key] = general[key]
 
@@ -157,6 +158,9 @@ backup = false
 
 # Number of parallel workers. (Default: 8)
 workers = 8
+
+# Timeout in seconds for processing a single file. (Default: 60.0)
+# timeout = 60.0
 
 # auto-confirm all prompts (e.g., for CI). (Default: false)
 # yes = false
