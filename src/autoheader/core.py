@@ -4,6 +4,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import List, Tuple
 import logging
+from concurrent.futures import ThreadPoolExecutor
 
 # --- MODIFIED ---
 from .models import PlanItem, LanguageConfig
@@ -19,6 +20,72 @@ from rich.progress import track
 log = logging.getLogger(__name__)
 
 
+def _analyze_single_file(
+    args: Tuple[Path, LanguageConfig],
+    root: Path,
+    excludes: List[str],
+    depth: int | None,
+    override: bool,
+    remove: bool,
+    cache: dict,
+) -> Tuple[PlanItem, Tuple[str, dict] | None]:
+    path, lang = args
+    rel_posix = path.relative_to(root).as_posix()
+
+    if filters.is_excluded(path, root, excludes):
+        return PlanItem(path, rel_posix, "skip-excluded", prefix=lang.prefix, check_encoding=lang.check_encoding, template=lang.template), None
+
+    if not filters.within_depth(path, root, depth):
+        return PlanItem(path, rel_posix, "skip-excluded", reason="depth", prefix=lang.prefix, check_encoding=lang.check_encoding, template=lang.template), None
+
+    try:
+        stat = path.stat()
+        mtime = stat.st_mtime
+        file_size = stat.st_size
+        if file_size > MAX_FILE_SIZE_BYTES:
+            reason = f"file size ({file_size}b) exceeds limit"
+            return PlanItem(path, rel_posix, "skip-excluded", reason=reason, prefix=lang.prefix, check_encoding=lang.check_encoding, template=lang.template), None
+    except (IOError, PermissionError) as e:
+        log.warning(f"Could not stat file {path}: {e}")
+        return PlanItem(path, rel_posix, "skip-excluded", reason=f"stat failed: {e}", prefix=lang.prefix, check_encoding=lang.check_encoding, template=lang.template), None
+
+    if rel_posix in cache and cache[rel_posix]["mtime"] == mtime:
+        return PlanItem(path, rel_posix, "skip-cached", prefix=lang.prefix, check_encoding=lang.check_encoding, template=lang.template), (rel_posix, cache[rel_posix])
+
+    lines = filesystem.read_file_lines(path)
+    file_hash = filesystem.get_file_hash(lines)
+    cache_entry = {"mtime": mtime, "hash": file_hash}
+
+    is_ignored = False
+    for line in lines:
+        if INLINE_IGNORE_COMMENT in line:
+            is_ignored = True
+            break
+    
+    if is_ignored:
+        return PlanItem(path, rel_posix, "skip-excluded", reason="inline ignore", prefix=lang.prefix, check_encoding=lang.check_encoding, template=lang.template), (rel_posix, cache_entry)
+
+    expected = headerlogic.header_line_for(rel_posix, lang.template)
+    analysis = headerlogic.analyze_header_state(lines, expected, lang.prefix, lang.check_encoding)
+
+    if remove:
+        if analysis.existing_header_line is not None:
+            return PlanItem(path, rel_posix, "remove", prefix=lang.prefix, check_encoding=lang.check_encoding, template=lang.template), (rel_posix, cache_entry)
+        else:
+            return PlanItem(path, rel_posix, "skip-header-exists", reason="no-header-to-remove", prefix=lang.prefix, check_encoding=lang.check_encoding, template=lang.template), (rel_posix, cache_entry)
+
+    if analysis.has_correct_header:
+        return PlanItem(path, rel_posix, "skip-header-exists", prefix=lang.prefix, check_encoding=lang.check_encoding, template=lang.template), (rel_posix, cache_entry)
+
+    if analysis.existing_header_line is None:
+        return PlanItem(path, rel_posix, "add", prefix=lang.prefix, check_encoding=lang.check_encoding, template=lang.template), (rel_posix, cache_entry)
+
+    if override:
+        return PlanItem(path, rel_posix, "override", prefix=lang.prefix, check_encoding=lang.check_encoding, template=lang.template), (rel_posix, cache_entry)
+    else:
+        return PlanItem(path, rel_posix, "skip-header-exists", reason="incorrect-header-no-override", prefix=lang.prefix, check_encoding=lang.check_encoding, template=lang.template), (rel_posix, cache_entry)
+
+
 def plan_files(
     root: Path,
     *,
@@ -27,7 +94,8 @@ def plan_files(
     override: bool,
     remove: bool,
     # --- MODIFIED ---
-    languages: List[LanguageConfig]
+    languages: List[LanguageConfig],
+    workers: int,
 ) -> Tuple[List[PlanItem], dict]:
     """
     Plan all actions to be taken. This is now an orchestrator
@@ -38,128 +106,27 @@ def plan_files(
     cache = filesystem.load_cache(root) if use_cache else {}
     new_cache = {}
 
-    # --- MODIFIED ---
-    file_iterator = filesystem.find_configured_files(root, languages)
+    file_iterator = list(filesystem.find_configured_files(root, languages))
 
-    for path, lang in track(
-        file_iterator,
-        description="Planning files...",
-        console=ui.console,
-        disable=ui.console.quiet,
-        transient=True,
-    ):
-    # --- END MODIFIED ---
-        rel_posix = path.relative_to(root).as_posix()
-
-        if filters.is_excluded(path, root, excludes):
-            # Pass lang config to PlanItem
-            out.append(PlanItem(path, rel_posix, "skip-excluded", 
-                                prefix=lang.prefix, 
-                                check_encoding=lang.check_encoding, 
-                                template=lang.template))
-            continue
-
-        if not filters.within_depth(path, root, depth):
-            out.append(PlanItem(path, rel_posix, "skip-excluded", reason="depth",
-                                prefix=lang.prefix, 
-                                check_encoding=lang.check_encoding, 
-                                template=lang.template))
-            continue
-
-        try:
-            stat = path.stat()
-            mtime = stat.st_mtime
-            file_size = stat.st_size
-            if file_size > MAX_FILE_SIZE_BYTES:
-                reason = f"file size ({file_size}b) exceeds limit"
-                out.append(PlanItem(path, rel_posix, "skip-excluded", reason=reason,
-                                    prefix=lang.prefix, 
-                                    check_encoding=lang.check_encoding, 
-                                    template=lang.template))
-                continue
-        except (IOError, PermissionError) as e:
-            log.warning(f"Could not stat file {path}: {e}")
-            out.append(PlanItem(path, rel_posix, "skip-excluded", reason=f"stat failed: {e}",
-                                prefix=lang.prefix, 
-                                check_encoding=lang.check_encoding, 
-                                template=lang.template))
-            continue
-
-        if rel_posix in cache and cache[rel_posix]["mtime"] == mtime:
-            out.append(PlanItem(path, rel_posix, "skip-cached",
-                                prefix=lang.prefix,
-                                check_encoding=lang.check_encoding,
-                                template=lang.template))
-            new_cache[rel_posix] = cache[rel_posix]
-            continue
-
-        lines = filesystem.read_file_lines(path)
-        file_hash = filesystem.get_file_hash(lines)
-        new_cache[rel_posix] = {"mtime": mtime, "hash": file_hash}
-
-        is_ignored = False
-        for line in lines:
-            if INLINE_IGNORE_COMMENT in line:
-                is_ignored = True
-                break
-        
-        if is_ignored:
-            out.append(PlanItem(path, rel_posix, "skip-excluded", reason="inline ignore",
-                                prefix=lang.prefix, 
-                                check_encoding=lang.check_encoding, 
-                                template=lang.template))
-            continue
-
-        # --- MODIFIED ---
-        expected = headerlogic.header_line_for(rel_posix, lang.template)
-        analysis = headerlogic.analyze_header_state(
-            lines, expected, lang.prefix, lang.check_encoding
+    with ThreadPoolExecutor(max_workers=workers) as executor:
+        results = track(
+            executor.map(
+                lambda args: _analyze_single_file(
+                    args, root, excludes, depth, override, remove, cache
+                ),
+                file_iterator,
+            ),
+            description="Planning files...",
+            console=ui.console,
+            disable=ui.console.quiet,
+            transient=True,
+            total=len(file_iterator),
         )
-        # --- END MODIFIED ---
-
-        if remove:
-            if analysis.existing_header_line is not None:
-                out.append(PlanItem(path, rel_posix, "remove",
-                                    prefix=lang.prefix, 
-                                    check_encoding=lang.check_encoding, 
-                                    template=lang.template))
-            else:
-                out.append(
-                    PlanItem(path, rel_posix, "skip-header-exists", reason="no-header-to-remove",
-                             prefix=lang.prefix, 
-                             check_encoding=lang.check_encoding, 
-                             template=lang.template)
-                )
-            continue
-
-        if analysis.has_correct_header:
-            out.append(PlanItem(path, rel_posix, "skip-header-exists",
-                                prefix=lang.prefix, 
-                                check_encoding=lang.check_encoding, 
-                                template=lang.template))
-            continue
-
-        if analysis.existing_header_line is None:
-            out.append(PlanItem(path, rel_posix, "add",
-                                prefix=lang.prefix, 
-                                check_encoding=lang.check_encoding, 
-                                template=lang.template))
-            continue
-
-        if override:
-            out.append(PlanItem(path, rel_posix, "override",
-                                prefix=lang.prefix, 
-                                check_encoding=lang.check_encoding, 
-                                template=lang.template))
-        else:
-            out.append(
-                PlanItem(
-                    path, rel_posix, "skip-header-exists", reason="incorrect-header-no-override",
-                    prefix=lang.prefix, 
-                    check_encoding=lang.check_encoding, 
-                    template=lang.template
-                )
-            )
+        for plan_item, cache_info in results:
+            out.append(plan_item)
+            if cache_info:
+                rel_posix, cache_entry = cache_info
+                new_cache[rel_posix] = cache_entry
 
     return out, new_cache
 

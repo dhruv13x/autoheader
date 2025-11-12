@@ -309,7 +309,8 @@ def main(argv: List[str] | None = None) -> int:
         excludes=all_excludes,
         override=args.override,
         remove=args.remove,
-        languages=languages  # <-- MODIFIED
+        languages=languages,  # <-- MODIFIED
+        workers=args.workers,
     )
     log.info(f"Plan complete. Found {len(plan)} files.")
 

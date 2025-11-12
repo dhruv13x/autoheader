@@ -40,6 +40,7 @@ def test_plan_files(populated_project: Path):
         override=False,
         remove=False,
         languages=DEFAULT_LANGUAGES,
+        workers=1,
     )
     # --- END MODIFIED ---
 
@@ -71,7 +72,7 @@ def test_plan_files_with_flags(populated_project: Path):
     # --- Test --override ---
     # --- MODIFIED: Pass languages argument ---
     plan_override, _ = plan_files(
-        root, depth=None, excludes=[], override=True, remove=False, languages=DEFAULT_LANGUAGES
+        root, depth=None, excludes=[], override=True, remove=False, languages=DEFAULT_LANGUAGES, workers=1
     )
     # --- END MODIFIED ---
     plan_map = {item.rel_posix: item.action for item in plan_override}
@@ -81,7 +82,7 @@ def test_plan_files_with_flags(populated_project: Path):
     # --- Test --remove ---
     # --- MODIFIED: Pass languages argument ---
     plan_remove, _ = plan_files(
-        root, depth=None, excludes=[], override=False, remove=True, languages=DEFAULT_LANGUAGES
+        root, depth=None, excludes=[], override=False, remove=True, languages=DEFAULT_LANGUAGES, workers=1
     )
     # --- END MODIFIED ---
     plan_map = {item.rel_posix: item.action for item in plan_remove}
@@ -93,7 +94,7 @@ def test_plan_files_with_flags(populated_project: Path):
     # --- Test --depth ---
     # --- MODIFIED: Pass languages argument ---
     plan_depth, _ = plan_files(
-        root, depth=3, excludes=[], override=False, remove=False, languages=DEFAULT_LANGUAGES
+        root, depth=3, excludes=[], override=False, remove=False, languages=DEFAULT_LANGUAGES, workers=1
     )
     # --- END MODIFIED ---
     plan_map = {item.rel_posix: item.action for item in plan_depth}
