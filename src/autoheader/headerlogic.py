@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from typing import List
 import datetime
 from pathlib import Path
+import ast
 
 from .constants import ENCODING_RX
 
@@ -33,7 +34,8 @@ def analyze_header_state(
     lines: List[str],
     expected_header: str,
     prefix: str,
-    check_encoding: bool  # <-- ADD THIS
+    check_encoding: bool,  # <-- ADD THIS
+    analysis_mode: str = "line",
 ) -> HeaderAnalysis:
     """
     Pure, testable logic to find header insertion point and check existing state.
@@ -54,6 +56,40 @@ def analyze_header_state(
         elif len(lines) > i and ENCODING_RX.match(lines[i]):
             i += 1
     # --- END CONDITIONAL BLOCK ---
+    if analysis_mode == "ast":
+        # Special handling for Python AST analysis
+        # We still respect shebang/encoding, but then use AST to find the true
+        # start of the code, ignoring the module-level docstring.
+        try:
+            # Join lines starting from `i` (after shebang/encoding)
+            content_to_parse = "\n".join(lines[i:])
+            if not content_to_parse.strip():
+                return HeaderAnalysis(i, None, False)
+
+            tree = ast.parse(content_to_parse)
+            relative_insert_index = 0
+
+            for node in tree.body:
+                is_docstring = (
+                    isinstance(node, ast.Expr)
+                    and isinstance(node.value, ast.Constant)
+                    and isinstance(node.value.value, str)
+                )
+                is_future_import = (
+                    isinstance(node, ast.ImportFrom) and node.module == "__future__"
+                )
+
+                if is_docstring or is_future_import:
+                    if node.end_lineno is not None:
+                        relative_insert_index = node.end_lineno
+                else:
+                    break
+            i += relative_insert_index
+
+        except (SyntaxError, IndexError, ValueError):
+            # If the file isn't valid Python, fall back to the simple line-based
+            # analysis. `i` will still be at the correct shebang/encoding offset.
+            pass
 
     # At this point, `i` is the correct insertion index
     insert_index = i

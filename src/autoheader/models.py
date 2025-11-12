@@ -15,6 +15,7 @@ class LanguageConfig:
     prefix: str
     check_encoding: bool  # Is this Python-like (shebang, encoding)?
     template: str  # The template for the header line
+    analysis_mode: str = "line"
 
 
 @dataclass
@@ -28,6 +29,7 @@ class PlanItem:
     prefix: str
     check_encoding: bool
     template: str
+    analysis_mode: str
     # --- END ADD ---
 
     reason: str = ""

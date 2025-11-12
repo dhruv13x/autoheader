@@ -105,6 +105,7 @@ def load_language_configs(
                     prefix=prefix, # Use the variable
                     check_encoding=lang_data.get("check_encoding", False),
                     template=template,
+                    analysis_mode=lang_data.get("analysis_mode", "line"),
                 )
                 languages.append(lang)
             except KeyError as e:

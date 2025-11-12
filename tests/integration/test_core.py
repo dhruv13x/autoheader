@@ -120,6 +120,7 @@ def test_write_with_header_actions(populated_project: Path):
         prefix=PY_LANG.prefix,
         check_encoding=PY_LANG.check_encoding,
         template=PY_LANG.template,
+        analysis_mode=PY_LANG.analysis_mode,
     )
     # --- END MODIFIED ---
     
@@ -147,6 +148,7 @@ def test_write_with_header_actions(populated_project: Path):
         prefix=PY_LANG.prefix,
         check_encoding=PY_LANG.check_encoding,
         template=PY_LANG.template,
+        analysis_mode=PY_LANG.analysis_mode,
     )
     # --- END MODIFIED ---
     
@@ -172,6 +174,7 @@ def test_write_with_header_actions(populated_project: Path):
         prefix=PY_LANG.prefix,
         check_encoding=PY_LANG.check_encoding,
         template=PY_LANG.template,
+        analysis_mode=PY_LANG.analysis_mode,
     )
     # --- END MODIFIED ---
     

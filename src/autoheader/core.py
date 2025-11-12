@@ -33,10 +33,10 @@ def _analyze_single_file(
     rel_posix = path.relative_to(root).as_posix()
 
     if filters.is_excluded(path, root, excludes):
-        return PlanItem(path, rel_posix, "skip-excluded", prefix=lang.prefix, check_encoding=lang.check_encoding, template=lang.template), None
+        return PlanItem(path, rel_posix, "skip-excluded", prefix=lang.prefix, check_encoding=lang.check_encoding, template=lang.template, analysis_mode=lang.analysis_mode), None
 
     if not filters.within_depth(path, root, depth):
-        return PlanItem(path, rel_posix, "skip-excluded", reason="depth", prefix=lang.prefix, check_encoding=lang.check_encoding, template=lang.template), None
+        return PlanItem(path, rel_posix, "skip-excluded", reason="depth", prefix=lang.prefix, check_encoding=lang.check_encoding, template=lang.template, analysis_mode=lang.analysis_mode), None
 
     try:
         stat = path.stat()
@@ -44,13 +44,13 @@ def _analyze_single_file(
         file_size = stat.st_size
         if file_size > MAX_FILE_SIZE_BYTES:
             reason = f"file size ({file_size}b) exceeds limit"
-            return PlanItem(path, rel_posix, "skip-excluded", reason=reason, prefix=lang.prefix, check_encoding=lang.check_encoding, template=lang.template), None
+            return PlanItem(path, rel_posix, "skip-excluded", reason=reason, prefix=lang.prefix, check_encoding=lang.check_encoding, template=lang.template, analysis_mode=lang.analysis_mode), None
     except (IOError, PermissionError) as e:
         log.warning(f"Could not stat file {path}: {e}")
-        return PlanItem(path, rel_posix, "skip-excluded", reason=f"stat failed: {e}", prefix=lang.prefix, check_encoding=lang.check_encoding, template=lang.template), None
+        return PlanItem(path, rel_posix, "skip-excluded", reason=f"stat failed: {e}", prefix=lang.prefix, check_encoding=lang.check_encoding, template=lang.template, analysis_mode=lang.analysis_mode), None
 
     if rel_posix in cache and cache[rel_posix]["mtime"] == mtime:
-        return PlanItem(path, rel_posix, "skip-cached", prefix=lang.prefix, check_encoding=lang.check_encoding, template=lang.template), (rel_posix, cache[rel_posix])
+        return PlanItem(path, rel_posix, "skip-cached", prefix=lang.prefix, check_encoding=lang.check_encoding, template=lang.template, analysis_mode=lang.analysis_mode), (rel_posix, cache[rel_posix])
 
     lines = filesystem.read_file_lines(path)
     file_hash = filesystem.get_file_hash(lines)
@@ -63,27 +63,29 @@ def _analyze_single_file(
             break
     
     if is_ignored:
-        return PlanItem(path, rel_posix, "skip-excluded", reason="inline ignore", prefix=lang.prefix, check_encoding=lang.check_encoding, template=lang.template), (rel_posix, cache_entry)
+        return PlanItem(path, rel_posix, "skip-excluded", reason="inline ignore", prefix=lang.prefix, check_encoding=lang.check_encoding, template=lang.template, analysis_mode=lang.analysis_mode), (rel_posix, cache_entry)
 
     expected = headerlogic.header_line_for(rel_posix, lang.template)
-    analysis = headerlogic.analyze_header_state(lines, expected, lang.prefix, lang.check_encoding)
+    analysis = headerlogic.analyze_header_state(
+        lines, expected, lang.prefix, lang.check_encoding, lang.analysis_mode
+    )
 
     if remove:
         if analysis.existing_header_line is not None:
-            return PlanItem(path, rel_posix, "remove", prefix=lang.prefix, check_encoding=lang.check_encoding, template=lang.template), (rel_posix, cache_entry)
+            return PlanItem(path, rel_posix, "remove", prefix=lang.prefix, check_encoding=lang.check_encoding, template=lang.template, analysis_mode=lang.analysis_mode), (rel_posix, cache_entry)
         else:
-            return PlanItem(path, rel_posix, "skip-header-exists", reason="no-header-to-remove", prefix=lang.prefix, check_encoding=lang.check_encoding, template=lang.template), (rel_posix, cache_entry)
+            return PlanItem(path, rel_posix, "skip-header-exists", reason="no-header-to-remove", prefix=lang.prefix, check_encoding=lang.check_encoding, template=lang.template, analysis_mode=lang.analysis_mode), (rel_posix, cache_entry)
 
     if analysis.has_correct_header:
-        return PlanItem(path, rel_posix, "skip-header-exists", prefix=lang.prefix, check_encoding=lang.check_encoding, template=lang.template), (rel_posix, cache_entry)
+        return PlanItem(path, rel_posix, "skip-header-exists", prefix=lang.prefix, check_encoding=lang.check_encoding, template=lang.template, analysis_mode=lang.analysis_mode), (rel_posix, cache_entry)
 
     if analysis.existing_header_line is None:
-        return PlanItem(path, rel_posix, "add", prefix=lang.prefix, check_encoding=lang.check_encoding, template=lang.template), (rel_posix, cache_entry)
+        return PlanItem(path, rel_posix, "add", prefix=lang.prefix, check_encoding=lang.check_encoding, template=lang.template, analysis_mode=lang.analysis_mode), (rel_posix, cache_entry)
 
     if override:
-        return PlanItem(path, rel_posix, "override", prefix=lang.prefix, check_encoding=lang.check_encoding, template=lang.template), (rel_posix, cache_entry)
+        return PlanItem(path, rel_posix, "override", prefix=lang.prefix, check_encoding=lang.check_encoding, template=lang.template, analysis_mode=lang.analysis_mode), (rel_posix, cache_entry)
     else:
-        return PlanItem(path, rel_posix, "skip-header-exists", reason="incorrect-header-no-override", prefix=lang.prefix, check_encoding=lang.check_encoding, template=lang.template), (rel_posix, cache_entry)
+        return PlanItem(path, rel_posix, "skip-header-exists", reason="incorrect-header-no-override", prefix=lang.prefix, check_encoding=lang.check_encoding, template=lang.template, analysis_mode=lang.analysis_mode), (rel_posix, cache_entry)
 
 
 def plan_files(
@@ -155,7 +157,7 @@ def write_with_header(
 
     # --- MODIFIED ---
     analysis = headerlogic.analyze_header_state(
-        original_lines, expected, item.prefix, item.check_encoding
+        original_lines, expected, item.prefix, item.check_encoding, item.analysis_mode
     )
     # --- END MODIFIED ---
 
