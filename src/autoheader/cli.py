@@ -250,8 +250,8 @@ def main(argv: List[str] | None = None) -> int:
             from . import precommit
             precommit.install_precommit_config(root)
             return 0
-        except ImportError:
-            # Error is already printed by precommit.py
+        except (ImportError, AttributeError) as e:
+            ui.console.print(f"[red]Failed to install pre-commit hook: {e}[/red]")
             return 1
         except Exception as e:
             ui.console.print(f"[red]Failed to install pre-commit hook: {e}[/red]")
