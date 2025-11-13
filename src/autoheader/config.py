@@ -4,6 +4,7 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
+import urllib.request
 
 # Use tomllib if available (3.11+), else fall back to tomli
 try:
@@ -18,13 +19,32 @@ from .models import LanguageConfig
 log = logging.getLogger(__name__)
 
 
-def load_config_data(root: Path) -> Tuple[Dict[str, Any], Path | None]:
-    """Helper to load the TOML file just once."""
+def load_config_data(root: Path, config_url: str | None) -> Tuple[Dict[str, Any], Path | None]:
+    """Helper to load the TOML data from a URL or local file."""
+    if config_url:
+        log.debug(f"Loading remote config from {config_url}")
+        try:
+            with urllib.request.urlopen(config_url) as response:
+                if response.status == 200:
+                    # The content is bytes, so we need to decode it
+                    toml_content = response.read().decode("utf-8")
+                    toml_data = tomllib.loads(toml_content)
+                    return (toml_data, None)
+                else:
+                    log.warning(
+                        f"Failed to fetch remote config (HTTP {response.status}). "
+                        "Using defaults."
+                    )
+                    return ({}, None)
+        except Exception as e:
+            log.warning(f"Could not fetch or parse remote config: {e}. Using defaults.")
+            return ({}, None)
+
     config_path = root / CONFIG_FILE_NAME
     if not config_path.is_file():
         log.debug(f"No {CONFIG_FILE_NAME} found, using defaults.")
         return ({}, None)
-    
+
     log.debug(f"Loading config from {config_path}")
     try:
         with config_path.open("rb") as f:
