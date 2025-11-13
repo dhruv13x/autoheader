@@ -334,22 +334,28 @@ def test_save_cache_error(fs, caplog):
     fs.create_dir(root)
     cache_path = root / ".autoheader_cache"
 
-    # Make the directory read-only to cause a permission error
-    fs.chmod(root, 0o555)
+    # Mock open to raise IOError when writing
+    # We rely on the filesystem implementation in src which does:
+    # with cache_path.open("w", encoding="utf-8")
+    
+    # The easiest way to fail a write in pyfakefs is usually strict permission
+    # or mocking the open call directly.
+    
+    with mock.patch("pathlib.Path.open", side_effect=IOError("Disk full")):
+        with caplog.at_level(logging.WARNING):
+            save_cache(root, {"key": "value"})
 
-    with caplog.at_level(logging.WARNING):
-        save_cache(root, {"key": "value"})
-
-    assert f"Could not save cache file: [Errno 13] " in caplog.text
+    assert "Could not save cache file: Disk full" in caplog.text
 
 def test_get_file_hash_error(fs, caplog):
     """Tests that an error during hashing is logged and returns an empty string."""
     p = Path("/unreadable.txt")
     fs.create_file(p)
-    fs.chmod(p, 0o000) # no permissions
-
-    with caplog.at_level(logging.WARNING):
-        result = get_file_hash(p)
+    
+    # Mock open to raise an error
+    with mock.patch("pathlib.Path.open", side_effect=IOError("Read error")):
+        with caplog.at_level(logging.WARNING):
+            result = get_file_hash(p)
 
     assert result == ""
     assert f"Failed to hash {p}" in caplog.text
