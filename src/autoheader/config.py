@@ -5,6 +5,8 @@ import logging
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
 import urllib.request
+import socket
+import time
 
 # Use tomllib if available (3.11+), else fall back to tomli
 try:
@@ -19,26 +21,55 @@ from .models import LanguageConfig
 log = logging.getLogger(__name__)
 
 
-def load_config_data(root: Path, config_url: str | None) -> Tuple[Dict[str, Any], Path | None]:
+def fetch_remote_config_safe(
+    url: str, timeout: float = 10.0, max_size: int = 1_048_576
+) -> dict | None:
+    """Safely fetches and parses a remote TOML config file with retries."""
+    for attempt in range(3):
+        try:
+            with urllib.request.urlopen(url, timeout=timeout) as response:
+                if response.status != 200:
+                    log.warning(f"Failed to fetch remote config (HTTP {response.status}).")
+                    return None
+
+                content_length = response.headers.get("Content-Length")
+                if content_length and int(content_length) > max_size:
+                    log.warning(f"Remote config exceeds size limit of {max_size} bytes.")
+                    return None
+
+                # Read in chunks to prevent memory exhaustion
+                content = b""
+                while True:
+                    chunk = response.read(65536)  # 64KB chunks
+                    if not chunk:
+                        break
+                    content += chunk
+                    if len(content) > max_size:
+                        log.warning(f"Remote config download exceeded size limit of {max_size} bytes.")
+                        return None
+
+                toml_content = content.decode("utf-8")
+                return tomllib.loads(toml_content)
+
+        except (urllib.error.URLError, ConnectionResetError, socket.timeout) as e:
+            log.warning(f"Network error fetching remote config (attempt {attempt + 1}/3): {e}")
+            time.sleep(1)  # backoff
+        except tomllib.TOMLDecodeError as e:
+            log.warning(f"Failed to parse remote TOML config: {e}")
+            return None
+        except Exception as e:
+            log.warning(f"An unexpected error occurred while fetching remote config: {e}")
+            return None
+
+    log.error("Failed to fetch remote config after 3 attempts.")
+    return None
+
+def load_config_data(root: Path, config_url: str | None, timeout: float) -> Tuple[Dict[str, Any], Path | None]:
     """Helper to load the TOML data from a URL or local file."""
     if config_url:
         log.debug(f"Loading remote config from {config_url}")
-        try:
-            with urllib.request.urlopen(config_url) as response:
-                if response.status == 200:
-                    # The content is bytes, so we need to decode it
-                    toml_content = response.read().decode("utf-8")
-                    toml_data = tomllib.loads(toml_content)
-                    return (toml_data, None)
-                else:
-                    log.warning(
-                        f"Failed to fetch remote config (HTTP {response.status}). "
-                        "Using defaults."
-                    )
-                    return ({}, None)
-        except Exception as e:
-            log.warning(f"Could not fetch or parse remote config: {e}. Using defaults.")
-            return ({}, None)
+        toml_data = fetch_remote_config_safe(config_url, timeout=timeout)
+        return (toml_data or {}, None)
 
     config_path = root / CONFIG_FILE_NAME
     if not config_path.is_file():

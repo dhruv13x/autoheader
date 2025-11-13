@@ -37,7 +37,7 @@ from .core import (
 )
 # --- ADD THIS IMPORT ---
 from . import filesystem
-from .models import PlanItem
+from .models import PlanItem, RuntimeContext
 
 # Get the root logger for our application
 log = logging.getLogger("autoheader")
@@ -227,8 +227,10 @@ def main(argv: List[str] | None = None) -> int:
     )
 
     # Load all TOML data once
-    toml_data, toml_path = config.load_config_data(root, temp_args.config_url)
-    
+    toml_data, toml_path = config.load_config_data(
+        root, temp_args.config_url, temp_args.timeout
+    )
+
     # Load general settings
     general_config = config.load_general_config(toml_data)
     parser.set_defaults(**general_config)
@@ -324,17 +326,21 @@ def main(argv: List[str] | None = None) -> int:
     # log.debug(f"Header prefix = {args.prefix}") # <-- REMOVED
 
     # 1. PLAN
-    log.info(f"Planning changes for {root}...")
-    plan, new_cache = plan_files(
-        root,
-        depth=args.depth,
-        excludes=all_excludes,
-        override=args.override,
-        remove=args.remove,
-        check_hash=args.check_hash,
-        languages=languages,  # <-- MODIFIED
-        workers=args.workers,
-    )
+    with ui.console.status("Initializing project context..."):
+        context = RuntimeContext(
+            root=root,
+            excludes=all_excludes,
+            depth=args.depth,
+            override=args.override,
+            remove=args.remove,
+            check_hash=args.check_hash,
+            timeout=args.timeout,
+        )
+        plan, new_cache = plan_files(
+            context,
+            languages=languages,
+            workers=args.workers,
+        )
     log.info(f"Plan complete. Found {len(plan)} files.")
 
     # 2. PRE-CALCULATE & FILTER

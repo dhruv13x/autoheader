@@ -12,11 +12,13 @@ def test_remote_config():
     with patch("urllib.request.urlopen") as mock_urlopen:
         cm = MagicMock()
         cm.status = 200
-        cm.read.return_value = b'[general]\nworkers = 4\n'
+        cm.read.side_effect = [b'[general]\nworkers = 4\n', b'']
         cm.__enter__.return_value = cm
         mock_urlopen.return_value = cm
 
-        toml_data, _ = config.load_config_data(Path("/tmp"), "http://fake.url/autoheader.toml")
+        toml_data, _ = config.load_config_data(
+            Path("/tmp"), "http://fake.url/autoheader.toml", timeout=10.0
+        )
         assert toml_data["general"]["workers"] == 4
 
 def test_tamper_detection():

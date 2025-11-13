@@ -42,3 +42,16 @@ class RootDetectionResult:
     is_project_root: bool
     match_count: int
     path: Path
+
+
+@dataclass
+class RuntimeContext:
+    """Configuration flags encapsulated for less argument bloat."""
+
+    root: Path
+    excludes: List[str]
+    depth: int | None
+    override: bool
+    remove: bool
+    check_hash: bool
+    timeout: float

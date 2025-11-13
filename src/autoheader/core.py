@@ -7,7 +7,7 @@ import logging
 from concurrent.futures import ThreadPoolExecutor
 
 # --- MODIFIED ---
-from .models import PlanItem, LanguageConfig
+from .models import PlanItem, LanguageConfig, RuntimeContext
 from .constants import MAX_FILE_SIZE_BYTES, INLINE_IGNORE_COMMENT
 # --- END MODIFIED ---
 from . import filters
@@ -21,22 +21,16 @@ log = logging.getLogger(__name__)
 
 
 def _analyze_single_file(
-    args: Tuple[Path, LanguageConfig],
-    root: Path,
-    excludes: List[str],
-    depth: int | None,
-    override: bool,
-    remove: bool,
-    check_hash: bool,
+    args: Tuple[Path, LanguageConfig, RuntimeContext],
     cache: dict,
 ) -> Tuple[PlanItem, Tuple[str, dict] | None]:
-    path, lang = args
-    rel_posix = path.relative_to(root).as_posix()
+    path, lang, context = args
+    rel_posix = path.relative_to(context.root).as_posix()
 
-    if filters.is_excluded(path, root, excludes):
+    if filters.is_excluded(path, context.root, context.excludes):
         return PlanItem(path, rel_posix, "skip-excluded", prefix=lang.prefix, check_encoding=lang.check_encoding, template=lang.template, analysis_mode=lang.analysis_mode), None
 
-    if not filters.within_depth(path, root, depth):
+    if not filters.within_depth(path, context.root, context.depth):
         return PlanItem(path, rel_posix, "skip-excluded", reason="depth", prefix=lang.prefix, check_encoding=lang.check_encoding, template=lang.template, analysis_mode=lang.analysis_mode), None
 
     try:
@@ -53,9 +47,12 @@ def _analyze_single_file(
     if rel_posix in cache and cache[rel_posix]["mtime"] == mtime:
         return PlanItem(path, rel_posix, "skip-cached", prefix=lang.prefix, check_encoding=lang.check_encoding, template=lang.template, analysis_mode=lang.analysis_mode), (rel_posix, cache[rel_posix])
 
-    lines = filesystem.read_file_lines(path)
-    file_hash = filesystem.get_file_hash(lines)
+    file_hash = filesystem.get_file_hash(path)
+    if not file_hash:  # Hashing failed
+        return PlanItem(path, rel_posix, "skip-excluded", reason="hash failed", prefix=lang.prefix, check_encoding=lang.check_encoding, template=lang.template, analysis_mode=lang.analysis_mode), None
+
     cache_entry = {"mtime": mtime, "hash": file_hash}
+    lines = filesystem.read_file_lines(path)
 
     is_ignored = False
     for line in lines:
@@ -69,13 +66,13 @@ def _analyze_single_file(
     content = "\n".join(lines)
     expected = headerlogic.header_line_for(rel_posix, lang.template, content)
     analysis = headerlogic.analyze_header_state(
-        lines, expected, lang.prefix, lang.check_encoding, lang.analysis_mode, check_hash
+        lines, expected, lang.prefix, lang.check_encoding, lang.analysis_mode, context.check_hash
     )
 
     if analysis.has_tampered_header:
         return PlanItem(path, rel_posix, "override", reason="hash mismatch", prefix=lang.prefix, check_encoding=lang.check_encoding, template=lang.template, analysis_mode=lang.analysis_mode), (rel_posix, cache_entry)
 
-    if remove:
+    if context.remove:
         if analysis.existing_header_line is not None:
             return PlanItem(path, rel_posix, "remove", prefix=lang.prefix, check_encoding=lang.check_encoding, template=lang.template, analysis_mode=lang.analysis_mode), (rel_posix, cache_entry)
         else:
@@ -87,21 +84,14 @@ def _analyze_single_file(
     if analysis.existing_header_line is None:
         return PlanItem(path, rel_posix, "add", prefix=lang.prefix, check_encoding=lang.check_encoding, template=lang.template, analysis_mode=lang.analysis_mode), (rel_posix, cache_entry)
 
-    if override:
+    if context.override:
         return PlanItem(path, rel_posix, "override", prefix=lang.prefix, check_encoding=lang.check_encoding, template=lang.template, analysis_mode=lang.analysis_mode), (rel_posix, cache_entry)
     else:
         return PlanItem(path, rel_posix, "skip-header-exists", reason="incorrect-header-no-override", prefix=lang.prefix, check_encoding=lang.check_encoding, template=lang.template, analysis_mode=lang.analysis_mode), (rel_posix, cache_entry)
 
 
 def plan_files(
-    root: Path,
-    *,
-    depth: int | None,
-    excludes: List[str],
-    override: bool,
-    remove: bool,
-    check_hash: bool,
-    # --- MODIFIED ---
+    context: RuntimeContext,
     languages: List[LanguageConfig],
     workers: int,
 ) -> Tuple[List[PlanItem], dict]:
@@ -110,18 +100,21 @@ def plan_files(
     and does not contain any I/O logic itself.
     """
     out: List[PlanItem] = []
-    use_cache = not override and not remove
-    cache = filesystem.load_cache(root) if use_cache else {}
+    use_cache = not context.override and not context.remove
+    cache = filesystem.load_cache(context.root) if use_cache else {}
     new_cache = {}
 
-    file_iterator = list(filesystem.find_configured_files(root, languages))
+    file_iterator = [
+        (path, lang, context)
+        for path, lang in filesystem.find_configured_files(context.root, languages)
+    ]
 
     with ThreadPoolExecutor(max_workers=workers) as executor:
+        # We need to pass the cache dict to each call, but executor.map only iterates
+        # over the primary iterator. A lambda can capture the cache.
         results = track(
             executor.map(
-                lambda args: _analyze_single_file(
-                    args, root, excludes, depth, override, remove, check_hash, cache
-                ),
+                lambda args: _analyze_single_file(args, cache),
                 file_iterator,
             ),
             description="Planning files...",
@@ -192,6 +185,6 @@ def write_with_header(
     )
 
     new_mtime = path.stat().st_mtime
-    new_hash = filesystem.get_file_hash(new_lines)
+    new_hash = filesystem.get_file_hash(path)
 
     return item.action, new_mtime, new_hash
