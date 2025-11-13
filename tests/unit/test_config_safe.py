@@ -5,7 +5,7 @@ from unittest.mock import patch, MagicMock
 import socket
 import urllib.error
 
-from src.autoheader.config import fetch_remote_config_safe
+from autoheader.config import fetch_remote_config_safe
 
 class TestFetchRemoteConfigSafe(unittest.TestCase):
     @patch("urllib.request.urlopen")

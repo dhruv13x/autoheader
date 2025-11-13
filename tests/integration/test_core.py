@@ -97,7 +97,6 @@ def test_plan_files_with_flags(populated_project: Path):
     plan_depth, _ = plan_files(
         context_depth, files=None, languages=DEFAULT_LANGUAGES, workers=1
     )
-    plan_depth, _ = plan_files(context_depth, languages=DEFAULT_LANGUAGES, workers=1)
     # --- END MODIFIED ---
     plan_map = {item.rel_posix: item.action for item in plan_depth}
     # 'src/a/b/c/d/e/deep_file.py' (depth 5) should be excluded
