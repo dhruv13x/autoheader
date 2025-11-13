@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="https://raw.githubusercontent.com/dhruv13x/autoheader/main/logo.png" alt="autoheader logo" width="200"/>
+  <img src="autoheader_logo.png" alt="autoheader logo" width="200"/>
 </div>
 
 <div align="center">

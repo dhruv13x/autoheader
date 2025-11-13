@@ -95,7 +95,7 @@ addopts = [
     "--strict-markers",    # Be strict about pytest markers
     "--cov=src/autoheader",  # Measure coverage on the src package
     "--cov-report=term-missing", # Show missing lines in terminal
-    "--cov-fail-under=85",   # Fail build if coverage < 85%
+    "--cov-fail-under=90",   # Fail build if coverage < 85%
 ]
 python_files = "test_*.py"
 python_functions = "test_*"
