@@ -27,6 +27,7 @@ def _analyze_single_file(
     depth: int | None,
     override: bool,
     remove: bool,
+    check_hash: bool,
     cache: dict,
 ) -> Tuple[PlanItem, Tuple[str, dict] | None]:
     path, lang = args
@@ -65,10 +66,14 @@ def _analyze_single_file(
     if is_ignored:
         return PlanItem(path, rel_posix, "skip-excluded", reason="inline ignore", prefix=lang.prefix, check_encoding=lang.check_encoding, template=lang.template, analysis_mode=lang.analysis_mode), (rel_posix, cache_entry)
 
-    expected = headerlogic.header_line_for(rel_posix, lang.template)
+    content = "\n".join(lines)
+    expected = headerlogic.header_line_for(rel_posix, lang.template, content)
     analysis = headerlogic.analyze_header_state(
-        lines, expected, lang.prefix, lang.check_encoding, lang.analysis_mode
+        lines, expected, lang.prefix, lang.check_encoding, lang.analysis_mode, check_hash
     )
+
+    if analysis.has_tampered_header:
+        return PlanItem(path, rel_posix, "override", reason="hash mismatch", prefix=lang.prefix, check_encoding=lang.check_encoding, template=lang.template, analysis_mode=lang.analysis_mode), (rel_posix, cache_entry)
 
     if remove:
         if analysis.existing_header_line is not None:
@@ -95,6 +100,7 @@ def plan_files(
     excludes: List[str],
     override: bool,
     remove: bool,
+    check_hash: bool,
     # --- MODIFIED ---
     languages: List[LanguageConfig],
     workers: int,
@@ -114,7 +120,7 @@ def plan_files(
         results = track(
             executor.map(
                 lambda args: _analyze_single_file(
-                    args, root, excludes, depth, override, remove, cache
+                    args, root, excludes, depth, override, remove, check_hash, cache
                 ),
                 file_iterator,
             ),

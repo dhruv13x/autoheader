@@ -99,7 +99,7 @@ def test_analyze_header_state(lines_in, expected_analysis):
     """
     # --- MODIFIED: Pass new required arguments ---
     analysis = analyze_header_state(
-        lines_in, EXPECTED_HEADER, TEST_PREFIX, TEST_CHECK_ENCODING
+            lines_in, EXPECTED_HEADER, TEST_PREFIX, TEST_CHECK_ENCODING, check_hash=False
     )
     # --- END MODIFIED ---
     assert analysis == expected_analysis

@@ -11,13 +11,20 @@ from .constants import ENCODING_RX
 
 
 # --- MODIFIED ---
-def header_line_for(rel_posix: str, template: str) -> str:
+import hashlib
+
+
+def header_line_for(rel_posix: str, template: str, content: str | None = None) -> str:
     """Creates the header line from a template."""
-    return template.format(
+    formatted_template = template.format(
         path=rel_posix,
         filename=Path(rel_posix).name,
         year=datetime.datetime.now().year,
     )
+    if "{hash}" in formatted_template and content is not None:
+        file_hash = hashlib.sha256(content.encode("utf-8")).hexdigest()
+        formatted_template = formatted_template.replace("{hash}", file_hash)
+    return formatted_template
 
 
 @dataclass
@@ -27,6 +34,7 @@ class HeaderAnalysis:
     insert_index: int
     existing_header_line: str | None
     has_correct_header: bool
+    has_tampered_header: bool = False
 
 
 # --- MODIFIED ---
@@ -36,6 +44,7 @@ def analyze_header_state(
     prefix: str,
     check_encoding: bool,  # <-- ADD THIS
     analysis_mode: str = "line",
+    check_hash: bool = False,
 ) -> HeaderAnalysis:
     """
     Pure, testable logic to find header insertion point and check existing state.
@@ -96,11 +105,34 @@ def analyze_header_state(
     existing_header = None
     is_correct = False
 
-    if insert_index < len(lines) and lines[insert_index].startswith(prefix):
-        existing_header = lines[insert_index].strip()
-        
-        if existing_header.startswith(expected_header):
+    expected_header_lines = expected_header.splitlines()
+    num_expected_lines = len(expected_header_lines)
+
+    # Check if the whole block matches
+    is_correct = (
+        lines[insert_index : insert_index + num_expected_lines] == expected_header_lines
+    )
+
+    if not is_correct and insert_index < len(lines) and lines[insert_index].startswith(prefix):
+        if lines[insert_index].strip().startswith(expected_header_lines[0]):
             is_correct = True
+
+    if insert_index < len(lines) and lines[insert_index].startswith(prefix):
+        # For single-line compatibility, we still store the first line.
+        existing_header = lines[insert_index].strip()
+
+        if check_hash and "hash:" in existing_header:
+            import re
+            match = re.search(r"hash:([a-f0-9]{64})", existing_header)
+            if match:
+                existing_hash = match.group(1)
+                content_without_header = "\n".join(lines[insert_index + 1 :])
+                current_hash = hashlib.sha256(
+                    content_without_header.encode("utf-8")
+                ).hexdigest()
+                if existing_hash != current_hash:
+                    return HeaderAnalysis(insert_index, existing_header, False, has_tampered_header=True)
+
 
     return HeaderAnalysis(insert_index, existing_header, is_correct)
 
@@ -118,16 +150,18 @@ def build_new_lines(
     """
     new_lines = lines[:]
     insert_at = analysis.insert_index
+    expected_header_lines = expected_header.splitlines()
 
     if override and analysis.existing_header_line is not None:
         del new_lines[insert_at]
 
-    # Insert header
-    new_lines.insert(insert_at, expected_header)
+    # Insert header lines
+    for i, line in enumerate(expected_header_lines):
+        new_lines.insert(insert_at + i, line)
 
     # Insert N blank lines after it
     for i in range(blank_lines_after):
-        new_lines.insert(insert_at + 1 + i, "")
+        new_lines.insert(insert_at + len(expected_header_lines) + i, "")
 
     return new_lines
 
@@ -143,8 +177,11 @@ def build_removed_lines(
     insert_at = analysis.insert_index
 
     if analysis.existing_header_line is not None:
-        # Remove the header line
-        del new_lines[insert_at]
+        # We need to determine how many lines the old header occupied.
+        num_existing_lines = 0
+        if analysis.existing_header_line:
+            num_existing_lines = len(analysis.existing_header_line.splitlines())
+        del new_lines[insert_at : insert_at + num_existing_lines]
 
         # If the next line is a blank line, remove it too
         if insert_at < len(new_lines) and not new_lines[insert_at].strip():

@@ -90,7 +90,12 @@ def build_parser() -> argparse.ArgumentParser:
     )
 
     # --- CI & Pre-commit ---
-    g_ci = p.add_argument_group("CI / Pre-commit / Init")  # <-- MODIFIED GROUP NAME
+    g_ci = p.add_argument_group("CI / Pre-commit / Init")
+    g_ci.add_argument(
+        "--check-hash",
+        action="store_true",
+        help="Verify file integrity by checking content hash in headers.",
+    )
     g_ci_mode = g_ci.add_mutually_exclusive_group()
     g_ci_mode.add_argument(
         "--check",
@@ -134,6 +139,7 @@ def build_parser() -> argparse.ArgumentParser:
         type=float,
         help="Timeout in seconds for processing a single file. (Config: [general] timeout)",
     )
+    g_config.add_argument("--config-url", type=str, help="URL to fetch remote configuration from.")
     # --- END ADD ---
 
     # --- Filtering & Discovery ---
@@ -173,6 +179,13 @@ def build_parser() -> argparse.ArgumentParser:
     )
     g_output.add_argument("--no-color", action="store_true", help="Disable colored output.")
     g_output.add_argument("--no-emoji", action="store_true", help="Disable emoji prefixes.")
+    g_output.add_argument(
+        "--format",
+        type=str,
+        choices=["default", "sarif"],
+        default="default",
+        help="Output format.",
+    )
     
     # --- END REORGANIZATION ---
 
@@ -214,7 +227,7 @@ def main(argv: List[str] | None = None) -> int:
     )
 
     # Load all TOML data once
-    toml_data, toml_path = config.load_config_data(root)
+    toml_data, toml_path = config.load_config_data(root, temp_args.config_url)
     
     # Load general settings
     general_config = config.load_general_config(toml_data)
@@ -318,6 +331,7 @@ def main(argv: List[str] | None = None) -> int:
         excludes=all_excludes,
         override=args.override,
         remove=args.remove,
+        check_hash=args.check_hash,
         languages=languages,  # <-- MODIFIED
         workers=args.workers,
     )
@@ -360,6 +374,12 @@ def main(argv: List[str] | None = None) -> int:
         # --- END MODIFIED ---
         return 0  # Exit with success
     # --- END NEW ---
+
+    if args.format == "sarif":
+        from . import sarif
+        report = sarif.generate_sarif_report(items_to_process, str(root))
+        print(report)
+        return 1 if items_to_process else 0
 
     # 3. EXECUTE (Now in parallel)
     log.info(f"Applying changes to {len(items_to_process)} files using {args.workers} workers...")
