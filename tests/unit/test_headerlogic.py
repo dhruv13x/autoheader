@@ -1,5 +1,6 @@
 # tests/unit/test_headerlogic.py
 
+import pytest
 from autoheader.headerlogic import header_line_for
 
 def test_header_line_for_no_year():

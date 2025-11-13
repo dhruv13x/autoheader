@@ -104,6 +104,28 @@ def test_plan_files_with_flags(populated_project: Path):
     assert plan_map["src/dirty_file.py"] == "add"
 
 
+def test_analyze_single_file_too_large(fs):
+    """
+    Tests that _analyze_single_file skips a file that is too large.
+    """
+    from autoheader.core import _analyze_single_file
+    from autoheader.constants import MAX_FILE_SIZE_BYTES
+
+    root = Path("/fake_project")
+    fs.create_dir(root)
+    large_file = root / "large.py"
+    fs.create_file(large_file, st_size=MAX_FILE_SIZE_BYTES + 1)
+
+    context = RuntimeContext(
+        root=root, excludes=[], depth=None, override=False, remove=False, check_hash=False, timeout=60.0
+    )
+
+    plan_item, _ = _analyze_single_file((large_file, PY_LANG, context), {})
+
+    assert plan_item.action == "skip-excluded"
+    assert "file size" in plan_item.reason
+
+
 def test_write_with_header_actions(populated_project: Path):
     """
     Tests the write_with_header function to ensure it correctly
