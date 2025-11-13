@@ -219,6 +219,7 @@ def setup_logging(verbosity: int, quiet: bool) -> None:
 
 def main(argv: List[str] | None = None) -> int:
     start_time = time.monotonic()
+    ui.print_logo() # Print logo unconditionally at the start
     parser = build_parser()
 
     # --- MODIFIED: Config Loading ---
