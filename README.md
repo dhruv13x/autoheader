@@ -3,13 +3,34 @@
 </div>
 
 <div align="center">
-  
+
+<!-- Package Info -->
+[![PyPI version](https://img.shields.io/pypi/v/autoheader.svg)](https://pypi.org/project/autoheader/)
+[![Python](https://img.shields.io/badge/python-3.8%2B-blue.svg)](https://www.python.org/)
+![Wheel](https://img.shields.io/pypi/wheel/autoheader.svg)
+![GitHub release](https://img.shields.io/github/v/release/dhruv13x/autoheader)
+
+<!-- Build & Quality -->
+[![Build status](https://github.com/dhruv13x/autoheader/actions/workflows/publish.yml/badge.svg)](https://github.com/dhruv13x/autoheader/actions/workflows/publish.yml)
 [![Codecov](https://codecov.io/gh/dhruv13x/autoheader/graph/badge.svg)](https://codecov.io/gh/dhruv13x/autoheader)
-[![PyPI version](https://badge.fury.io/py/autoheader.svg)](https://badge.fury.io/py/autoheader)
+[![Test Coverage](https://img.shields.io/badge/coverage-90%25%2B-brightgreen.svg)](https://github.com/dhruv13x/autoheader/actions/workflows/test.yml)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![Ruff](https://img.shields.io/badge/linting-ruff-yellow.svg)](https://github.com/astral-sh/ruff)
+![Security](https://img.shields.io/badge/security-CodeQL-blue.svg)
+
+<!-- Usage -->
+[![Downloads](https://img.shields.io/pypi/dm/autoheader.svg)](https://pypistats.org/packages/autoheader)
+![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20Android%20(Termux)-orange.svg)
+[![Python Versions](https://img.shields.io/pypi/pyversions/autoheader.svg)](https://pypi.org/project/autoheader/)
+
+<!-- License -->
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Build status](https://github.com/dhruv13x/autoheader/actions/workflows/publish.yml/badge.svg)](https://github.com/dhruv13x/autoheader/actions)
+
+<!-- Docs -->
+[![Docs](https://img.shields.io/badge/docs-latest-brightgreen.svg)](https://your-docs-link)
 
 </div>
+
 
 # autoheader
 
