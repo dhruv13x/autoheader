@@ -19,8 +19,9 @@
 ![Security](https://img.shields.io/badge/security-CodeQL-blue.svg)
 
 <!-- Usage -->
-[![Downloads](https://img.shields.io/pypi/dm/autoheader.svg)](https://pypistats.org/packages/autoheader)
-![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20Android%20(Termux)-orange.svg)
+![Downloads](https://img.shields.io/pypi/dm/autoheader.svg)
+![OS](https://img.shields.io/badge/os-Linux%20%7C%20macOS%20%7C%20Windows-blue.svg)
+![Languages](https://img.shields.io/badge/languages-Python%20%7C%20JavaScript%20%7C%20TypeScript-green.svg)
 [![Python Versions](https://img.shields.io/pypi/pyversions/autoheader.svg)](https://pypi.org/project/autoheader/)
 
 <!-- License -->
