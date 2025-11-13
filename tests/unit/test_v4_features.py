@@ -3,10 +3,10 @@
 import pytest
 from pathlib import Path
 from unittest.mock import patch, MagicMock
-from src.autoheader import config
-from src.autoheader import headerlogic
-from src.autoheader import sarif
-from src.autoheader.models import PlanItem
+from autoheader import config
+from autoheader import headerlogic
+from autoheader import sarif
+from autoheader.models import PlanItem
 
 def test_remote_config():
     with patch("urllib.request.urlopen") as mock_urlopen:
