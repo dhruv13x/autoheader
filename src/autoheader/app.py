@@ -7,7 +7,6 @@ from typing import List
 
 from . import walker
 from . import ui
-from .models import RootDetectionResult
 from .constants import ROOT_MARKERS  # <-- NEW
 
 # Note: In a real implementation, you'd get the logger

@@ -28,7 +28,6 @@ from . import config
 from .constants import (
     DEFAULT_EXCLUDES,
     ROOT_MARKERS,
-    HEADER_PREFIX,
     CONFIG_FILE_NAME,  # <-- ADD THIS
 )
 from .core import (

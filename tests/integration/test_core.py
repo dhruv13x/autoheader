@@ -1,6 +1,5 @@
 # tests/integration/test_core.py
 
-import pytest
 from pathlib import Path
 
 from autoheader.core import plan_files, write_with_header

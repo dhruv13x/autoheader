@@ -3,7 +3,6 @@
 import unittest
 from unittest.mock import patch, MagicMock
 import socket
-import urllib.error
 
 from autoheader.config import fetch_remote_config_safe
 

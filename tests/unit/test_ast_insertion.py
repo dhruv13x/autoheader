@@ -3,7 +3,6 @@
 import pytest
 from autoheader.headerlogic import (
     analyze_header_state,
-    HeaderAnalysis,
 )
 from autoheader.constants import HEADER_PREFIX
 

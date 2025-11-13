@@ -2,12 +2,10 @@
 
 from __future__ import annotations
 
-import pytest
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 from concurrent.futures import TimeoutError, Future
 import importlib
-import sys
 
 from autoheader import cli, config
 from autoheader.models import PlanItem

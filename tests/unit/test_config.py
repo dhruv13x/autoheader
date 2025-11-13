@@ -1,6 +1,5 @@
 # tests/unit/test_config.py
 
-import pytest
 from pathlib import Path
 # --- MODIFIED IMPORTS ---
 from autoheader.config import (
@@ -8,7 +7,6 @@ from autoheader.config import (
     load_general_config,
     load_language_configs,
 )
-from autoheader.models import LanguageConfig
 from autoheader.constants import HEADER_PREFIX
 # --- END MODIFIED IMPORTS ---
 import logging

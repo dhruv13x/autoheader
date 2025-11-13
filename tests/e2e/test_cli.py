@@ -1,6 +1,5 @@
 # tests/e2e/test_cli.py
 
-import pytest
 from pathlib import Path
 from unittest import mock
 import logging
