@@ -6,6 +6,7 @@ import os
 import stat
 import logging
 from unittest import mock  # <-- Import mock
+import builtins # <-- ADDED
 
 # --- MODIFIED IMPORTS ---
 from autoheader.filesystem import (
@@ -279,7 +280,7 @@ def test_find_configured_files(tmp_path: Path):
     try:
         os.symlink(py_file_1, symlink_file)
         symlink_created = True
-    except (OSEError, NotImplementedError):
+    except (builtins.OSError, NotImplementedError): # <--- MODIFIED LINE
         # Symlinks may fail on some systems (e.g., Windows without admin)
         symlink_created = False
         print("Skipping symlink test; could not create symlink.")

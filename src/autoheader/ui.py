@@ -80,6 +80,21 @@ def format_dry_run_note() -> str:
     """Formats the dry-run note."""
     return f"[{STYLE_MAP['DRY_RUN']}]NOTE: this was a dry run. Use --no-dry-run to apply changes.[/{STYLE_MAP['DRY_RUN']}]"
 
+
+def print_logo() -> None:
+    """Prints the autoheader ASCII art logo."""
+    logo = r"""
+ _         _
+| |       | |
+| |__   __| | ___  _ __   ___  ___ ___
+| '_ \ / _` |/ _ \| '_ \ / _ \/ __/ __|
+| |_) | (_| | (_) | |_) |  __/\__ \__ \
+|_.__/ \__,_|\___/| .__/ \___||___/___/
+                  |_|
+"""
+    console.print(f"[bold blue]{logo}[/bold blue]")
+    console.print("[dim]A header management tool for your code.[/dim]\n")
+
 # --- End Rich Formatting ---
 
 

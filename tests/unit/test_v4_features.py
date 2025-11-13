@@ -1,6 +1,5 @@
 # tests/unit/test_v4_features.py
 
-import pytest
 from pathlib import Path
 from unittest.mock import patch, MagicMock
 from autoheader import config

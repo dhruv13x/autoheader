@@ -1,6 +1,5 @@
 # tests/integration/test_precommit.py
 
-import pytest
 import yaml
 from pathlib import Path
 

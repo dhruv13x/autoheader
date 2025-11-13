@@ -3,7 +3,6 @@
 import pytest
 from pathlib import Path
 from autoheader.walker import detect_project_root
-from autoheader.models import RootDetectionResult
 
 # 'pyfakefs_config' fixture is automatically used by pytest
 # when the 'fs' fixture (from pyfakefs) is an argument.
