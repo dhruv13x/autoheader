@@ -7,7 +7,7 @@
 [![Codecov](https://codecov.io/gh/dhruv13x/autoheader/graph/badge.svg)](https://codecov.io/gh/dhruv13x/autoheader)
 [![PyPI version](https://badge.fury.io/py/autoheader.svg)](https://badge.fury.io/py/autoheader)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Build status](https://github.com/dhruv13x/autoheader/workflows/publish/badge.svg)](https://github.com/dhruv13x/autoheader/actions)
+[![Build status](https://github.com/dhruv13x/autoheader/actions/workflows/publish.yml/badge.svg)](https://github.com/dhruv13x/autoheader/actions)
 
 </div>
 
