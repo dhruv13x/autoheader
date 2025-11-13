@@ -1,3 +1,7 @@
+<div align="center">
+  <img src="logo.png" alt="autoheader logo" width="200"/>
+</div>
+
 # autoheader
 
 **autoheader** is an enterprise-grade CLI tool for **source code projects** that automatically adds or refreshes file headers containing each file's *repo-relative path*.  
