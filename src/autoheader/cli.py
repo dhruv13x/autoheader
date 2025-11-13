@@ -67,6 +67,13 @@ def build_parser() -> argparse.ArgumentParser:
         version=f"%(prog)s {get_version()}",
     )
 
+    p.add_argument(
+        "files",
+        nargs="*",
+        type=Path,
+        help="Specific files to process. If not provided, scans the root directory.",
+    )
+
     # --- REORGANIZED FOR CLEANER HELP PANELS ---
 
     # --- Main Actions ---
@@ -338,6 +345,7 @@ def main(argv: List[str] | None = None) -> int:
         )
         plan, new_cache = plan_files(
             context,
+            files=[file.resolve() for file in args.files],
             languages=languages,
             workers=args.workers,
         )

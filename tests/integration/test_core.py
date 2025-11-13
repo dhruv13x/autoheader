@@ -41,7 +41,7 @@ def test_plan_files(populated_project: Path):
         check_hash=False,
         timeout=60.0,
     )
-    plan, _ = plan_files(context, languages=DEFAULT_LANGUAGES, workers=1)
+    plan, _ = plan_files(context, files=None, languages=DEFAULT_LANGUAGES, workers=1)
     # --- END MODIFIED ---
 
     # Convert to a dict for easy lookup
@@ -73,7 +73,9 @@ def test_plan_files_with_flags(populated_project: Path):
     context_override = RuntimeContext(
         root=root, excludes=[], depth=None, override=True, remove=False, check_hash=False, timeout=60.0
     )
-    plan_override, _ = plan_files(context_override, languages=DEFAULT_LANGUAGES, workers=1)
+    plan_override, _ = plan_files(
+        context_override, files=None, languages=DEFAULT_LANGUAGES, workers=1
+    )
     plan_map = {item.rel_posix: item.action for item in plan_override}
     assert plan_map["src/incorrect_file.py"] == "override"
 
@@ -81,7 +83,9 @@ def test_plan_files_with_flags(populated_project: Path):
     context_remove = RuntimeContext(
         root=root, excludes=[], depth=None, override=False, remove=True, check_hash=False, timeout=60.0
     )
-    plan_remove, _ = plan_files(context_remove, languages=DEFAULT_LANGUAGES, workers=1)
+    plan_remove, _ = plan_files(
+        context_remove, files=None, languages=DEFAULT_LANGUAGES, workers=1
+    )
     plan_map = {item.rel_posix: item.action for item in plan_remove}
     assert plan_map["src/clean_file.py"] == "remove"
     assert plan_map["src/dirty_file.py"] == "skip-header-exists"
@@ -89,6 +93,9 @@ def test_plan_files_with_flags(populated_project: Path):
     # --- Test --depth ---
     context_depth = RuntimeContext(
         root=root, excludes=[], depth=3, override=False, remove=False, check_hash=False, timeout=60.0
+    )
+    plan_depth, _ = plan_files(
+        context_depth, files=None, languages=DEFAULT_LANGUAGES, workers=1
     )
     plan_depth, _ = plan_files(context_depth, languages=DEFAULT_LANGUAGES, workers=1)
     # --- END MODIFIED ---

@@ -64,7 +64,13 @@ def _analyze_single_file(
         return PlanItem(path, rel_posix, "skip-excluded", reason="inline ignore", prefix=lang.prefix, check_encoding=lang.check_encoding, template=lang.template, analysis_mode=lang.analysis_mode), (rel_posix, cache_entry)
 
     content = "\n".join(lines)
-    expected = headerlogic.header_line_for(rel_posix, lang.template, content)
+    # First, get a preliminary analysis to find the existing header
+    prelim_analysis = headerlogic.analyze_header_state(
+        lines, "", lang.prefix, lang.check_encoding, lang.analysis_mode, context.check_hash
+    )
+    expected = headerlogic.header_line_for(
+        rel_posix, lang.template, content, prelim_analysis.existing_header_line
+    )
     analysis = headerlogic.analyze_header_state(
         lines, expected, lang.prefix, lang.check_encoding, lang.analysis_mode, context.check_hash
     )
@@ -90,8 +96,17 @@ def _analyze_single_file(
         return PlanItem(path, rel_posix, "skip-header-exists", reason="incorrect-header-no-override", prefix=lang.prefix, check_encoding=lang.check_encoding, template=lang.template, analysis_mode=lang.analysis_mode), (rel_posix, cache_entry)
 
 
+def _get_language_for_file(path: Path, languages: List[LanguageConfig]) -> LanguageConfig | None:
+    """Finds the first language config that matches the file path."""
+    for lang in languages:
+        for glob in lang.file_globs:
+            if path.match(glob):
+                return lang
+    return None
+
 def plan_files(
     context: RuntimeContext,
+    files: List[Path] | None,
     languages: List[LanguageConfig],
     workers: int,
 ) -> Tuple[List[PlanItem], dict]:
@@ -104,10 +119,19 @@ def plan_files(
     cache = filesystem.load_cache(context.root) if use_cache else {}
     new_cache = {}
 
-    file_iterator = [
-        (path, lang, context)
-        for path, lang in filesystem.find_configured_files(context.root, languages)
-    ]
+    if files:
+        file_iterator = []
+        for path in files:
+            lang = _get_language_for_file(path, languages)
+            if lang:
+                file_iterator.append((path, lang, context))
+            else:
+                log.warning(f"No language configuration found for file: {path}")
+    else:
+        file_iterator = [
+            (path, lang, context)
+            for path, lang in filesystem.find_configured_files(context.root, languages)
+        ]
 
     with ThreadPoolExecutor(max_workers=workers) as executor:
         # We need to pass the cache dict to each call, but executor.map only iterates
@@ -147,11 +171,13 @@ def write_with_header(
     path = item.path
     rel_posix = item.rel_posix
     
-    # --- MODIFIED: Get config from the item ---
-    expected = headerlogic.header_line_for(rel_posix, item.template)
-    # --- END MODIFIED ---
-
     original_lines = filesystem.read_file_lines(path)
+    analysis = headerlogic.analyze_header_state(
+        original_lines, "", item.prefix, item.check_encoding, item.analysis_mode
+    )
+    expected = headerlogic.header_line_for(
+        rel_posix, item.template, existing_header=analysis.existing_header_line
+    )
     original_content = "\n".join(original_lines) + "\n"
 
     # --- MODIFIED ---
@@ -175,6 +201,9 @@ def write_with_header(
         )
 
     new_text = "\n".join(new_lines) + "\n"
+
+    if dry_run and item.action in ("add", "override"):
+        ui.show_header_diff(rel_posix, analysis.existing_header_line, expected)
 
     filesystem.write_file_content(
         path,
