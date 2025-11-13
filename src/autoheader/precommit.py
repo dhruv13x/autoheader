@@ -22,7 +22,7 @@ LOCAL_AUTOHEADER_HOOK = {
     "entry": "autoheader --check",
     "language": "system",
     "types": ["python"],
-    "pass_filenames": False,  # Run against all files
+    "pass_filenames": True,
 }
 
 

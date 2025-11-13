@@ -14,16 +14,35 @@ from .constants import ENCODING_RX
 import hashlib
 
 
-def header_line_for(rel_posix: str, template: str, content: str | None = None) -> str:
-    """Creates the header line from a template."""
+def header_line_for(
+    rel_posix: str,
+    template: str,
+    content: str | None = None,
+    existing_header: str | None = None,
+) -> str:
+    """Creates the header line from a template, with smart year updating."""
+    import re
+
+    current_year = datetime.datetime.now().year
+    year_to_insert = str(current_year)
+
+    if existing_header and "{year}" in template:
+        match = re.search(r"\b(\d{4})\b", existing_header)
+        if match:
+            existing_year = int(match.group(1))
+            if existing_year < current_year:
+                year_to_insert = f"{existing_year}-{current_year}"
+
     formatted_template = template.format(
         path=rel_posix,
         filename=Path(rel_posix).name,
-        year=datetime.datetime.now().year,
+        year=year_to_insert,
     )
+
     if "{hash}" in formatted_template and content is not None:
         file_hash = hashlib.sha256(content.encode("utf-8")).hexdigest()
         formatted_template = formatted_template.replace("{hash}", file_hash)
+
     return formatted_template
 
 

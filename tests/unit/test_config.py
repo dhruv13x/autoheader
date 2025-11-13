@@ -41,7 +41,7 @@ def test_load_general_config_valid(fs):
     fs.create_dir(root)
     fs.create_file(root / "autoheader.toml", contents=VALID_TOML_CONTENT)
     
-    toml_data, _ = load_config_data(root, config_url=None)
+    toml_data, _ = load_config_data(root, config_url=None, timeout=10.0)
     config = load_general_config(toml_data)
 
     expected_config = {
@@ -63,7 +63,7 @@ def test_load_general_config_no_file(fs):
     root = Path("/other_project")
     fs.create_dir(root)
     
-    toml_data, _ = load_config_data(root, config_url=None)
+    toml_data, _ = load_config_data(root, config_url=None, timeout=10.0)
     config = load_general_config(toml_data)
     assert config == {}
 
@@ -78,7 +78,7 @@ def test_load_config_data_malformed(fs, caplog):
     fs.create_file(root / "autoheader.toml", contents="[general]\n key = 'unterminated string")
 
     with caplog.at_level(logging.WARNING):
-        toml_data, _ = load_config_data(root, config_url=None)
+        toml_data, _ = load_config_data(root, config_url=None, timeout=10.0)
         config = load_general_config(toml_data)
 
     assert toml_data == {}
@@ -97,7 +97,7 @@ def test_load_general_config_partial(fs):
         contents="[general]\nworkers = 16\n[header]\nblank_lines_after = 0"
     )
 
-    toml_data, _ = load_config_data(root, config_url=None)
+    toml_data, _ = load_config_data(root, config_url=None, timeout=10.0)
     config = load_general_config(toml_data)
     
     expected_config = {
@@ -154,7 +154,7 @@ def test_load_language_configs_custom(fs):
     fs.create_dir(root)
     fs.create_file(root / "autoheader.toml", contents=custom_toml)
     
-    toml_data, _ = load_config_data(root, config_url=None)
+    toml_data, _ = load_config_data(root, config_url=None, timeout=10.0)
     general_config = load_general_config(toml_data)
     languages = load_language_configs(toml_data, general_config)
     
@@ -184,7 +184,7 @@ def test_load_language_configs_missing_keys(fs, caplog):
     fs.create_dir(root)
     fs.create_file(root / "autoheader.toml", contents=custom_toml)
     
-    toml_data, _ = load_config_data(root, config_url=None)
+    toml_data, _ = load_config_data(root, config_url=None, timeout=10.0)
     general_config = load_general_config(toml_data)
     
     with caplog.at_level(logging.WARNING):
