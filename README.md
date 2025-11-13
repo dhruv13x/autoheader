@@ -8,7 +8,7 @@
 [![PyPI version](https://img.shields.io/pypi/v/autoheader.svg)](https://pypi.org/project/autoheader/)
 [![Python](https://img.shields.io/badge/python-3.8%2B-blue.svg)](https://www.python.org/)
 ![Wheel](https://img.shields.io/pypi/wheel/autoheader.svg)
-![GitHub release](https://img.shields.io/github/v/release/dhruv13x/autoheader)
+[![Release](https://img.shields.io/badge/release-PyPI-blue)](https://pypi.org/project/autoheader/)
 
 <!-- Build & Quality -->
 [![Build status](https://github.com/dhruv13x/autoheader/actions/workflows/publish.yml/badge.svg)](https://github.com/dhruv13x/autoheader/actions/workflows/publish.yml)
