@@ -1,9 +1,9 @@
 <div align="center">
-  <img src="autoheader_logo.png" alt="autoheader logo" width="200"/>
+  <img src="https://raw.githubusercontent.com/dhruv13x/autoheader/main/autoheader_logo.png" alt="autoheader logo" width="200"/>
 </div>
 
 <div align="center">
-
+  
 [![Codecov](https://codecov.io/gh/dhruv13x/autoheader/graph/badge.svg)](https://codecov.io/gh/dhruv13x/autoheader)
 [![PyPI version](https://badge.fury.io/py/autoheader.svg)](https://badge.fury.io/py/autoheader)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
