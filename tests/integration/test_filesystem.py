@@ -11,8 +11,10 @@ from unittest import mock  # <-- Import mock
 from autoheader.filesystem import (
     read_file_lines,
     write_file_content,
-    find_configured_files,  # <-- Renamed
-    load_gitignore_patterns,  # <-- Added
+    find_configured_files,
+    load_gitignore_patterns,
+    get_file_hash,
+    save_cache,
 )
 from autoheader.models import LanguageConfig  # <-- Added
 # --- END MODIFIED IMPORTS ---
@@ -306,3 +308,47 @@ def test_find_configured_files(tmp_path: Path):
     assert dir_with_js_suffix not in found_map
     if symlink_created:
         assert symlink_file not in found_map
+
+
+def test_get_file_hash_large_file(fs):
+    """Tests that get_file_hash correctly hashes a large file."""
+    large_file_path = Path("/large_file.bin")
+    # Create a 10MB file
+    large_content = b"a" * (10 * 1024 * 1024)
+    fs.create_file(large_file_path, contents=large_content)
+
+    # Calculate expected hash
+    import hashlib
+    expected_hash = hashlib.sha256(large_content).hexdigest()
+
+    # Calculate hash using the function
+    actual_hash = get_file_hash(large_file_path)
+
+    assert actual_hash == expected_hash
+
+
+def test_save_cache_error(fs, caplog):
+    """Tests that an error during cache saving is logged."""
+    root = Path("/fake_project")
+    fs.create_dir(root)
+    cache_path = root / ".autoheader_cache"
+
+    # Make the directory read-only to cause a permission error
+    fs.chmod(root, 0o555)
+
+    with caplog.at_level(logging.WARNING):
+        save_cache(root, {"key": "value"})
+
+    assert f"Could not save cache file: [Errno 13] " in caplog.text
+
+def test_get_file_hash_error(fs, caplog):
+    """Tests that an error during hashing is logged and returns an empty string."""
+    p = Path("/unreadable.txt")
+    fs.create_file(p)
+    fs.chmod(p, 0o000) # no permissions
+
+    with caplog.at_level(logging.WARNING):
+        result = get_file_hash(p)
+
+    assert result == ""
+    assert f"Failed to hash {p}" in caplog.text

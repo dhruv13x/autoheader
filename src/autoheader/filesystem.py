@@ -103,10 +103,20 @@ def load_gitignore_patterns(root: Path) -> List[str]:
         return []
 
 
-def get_file_hash(lines: List[str]) -> str:
-    """Calculates the SHA256 hash of file content."""
-    content = "\n".join(lines).encode("utf-8")
-    return hashlib.sha256(content).hexdigest()
+def get_file_hash(path: Path) -> str:
+    """Calculates the SHA256 hash of a file by reading in chunks."""
+    sha256 = hashlib.sha256()
+    try:
+        with path.open("rb") as f:
+            while True:
+                data = f.read(65536)  # 64KB chunks
+                if not data:
+                    break
+                sha256.update(data)
+    except (IOError, PermissionError) as e:
+        log.warning(f"Failed to hash {path}: {e}")
+        return ""
+    return sha256.hexdigest()
 
 
 def load_cache(root: Path) -> dict:

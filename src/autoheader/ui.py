@@ -115,6 +115,21 @@ def confirm_continue(auto_yes: bool = False) -> bool:
             return False
 
 
+def show_header_diff(path: str, old_header: str | None, new_header: str) -> None:
+    """Displays a rich diff for header changes."""
+    from rich.panel import Panel
+    from rich.text import Text
+
+    if old_header:
+        title = f"Header diff for [bold]{path}[/bold]"
+        content = Text.from_markup(f"- [red]{old_header}[/red]\n+ [green]{new_header}[/green]")
+    else:
+        title = f"Header to be added to [bold]{path}[/bold]"
+        content = Text.from_markup(f"+ [green]{new_header}[/green]")
+
+    console.print(Panel(content, title=title, border_style="dim"))
+
+
 def confirm_no_dry_run(needs_backup_warning: bool) -> bool:
     """
     Ask user to confirm a --no-dry-run operation.

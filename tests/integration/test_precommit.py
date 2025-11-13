@@ -110,3 +110,24 @@ def test_install_precommit_idempotent(fs):
     # Config should be unchanged
     assert len(config["repos"][0]["hooks"]) == 1
     assert config == existing_config
+
+
+def test_install_precommit_empty_file(fs):
+    """
+    Tests that the hook is added correctly to an empty .pre-commit-config.yaml.
+    """
+    from autoheader.precommit import install_precommit_config
+
+    root = Path("/fake_project")
+    fs.create_dir(root)
+    config_path = root / ".pre-commit-config.yaml"
+    fs.create_file(config_path, contents="")
+
+    install_precommit_config(root)
+
+    with config_path.open("r") as f:
+        config = yaml.safe_load(f)
+
+    assert "repos" in config
+    assert config["repos"][0]["repo"] == "local"
+    assert config["repos"][0]["hooks"][0]["id"] == "autoheader"

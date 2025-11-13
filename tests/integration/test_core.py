@@ -4,7 +4,7 @@ import pytest
 from pathlib import Path
 
 from autoheader.core import plan_files, write_with_header
-from autoheader.models import PlanItem
+from autoheader.models import PlanItem, RuntimeContext
 # --- ADD THESE IMPORTS ---
 from autoheader.models import LanguageConfig
 from autoheader.constants import HEADER_PREFIX
@@ -32,17 +32,16 @@ def test_plan_files(populated_project: Path):
     root = populated_project
 
     # Run the plan
-    # --- MODIFIED: Pass languages argument ---
-    plan, _ = plan_files(
-        root,
-        depth=None,
+    context = RuntimeContext(
+        root=root,
         excludes=[],
+        depth=None,
         override=False,
         remove=False,
-            check_hash=False,
-        languages=DEFAULT_LANGUAGES,
-        workers=1,
+        check_hash=False,
+        timeout=60.0,
     )
+    plan, _ = plan_files(context, files=None, languages=DEFAULT_LANGUAGES, workers=1)
     # --- END MODIFIED ---
 
     # Convert to a dict for easy lookup
@@ -71,31 +70,32 @@ def test_plan_files_with_flags(populated_project: Path):
     root = populated_project
 
     # --- Test --override ---
-    # --- MODIFIED: Pass languages argument ---
-    plan_override, _ = plan_files(
-            root, depth=None, excludes=[], override=True, remove=False, check_hash=False, languages=DEFAULT_LANGUAGES, workers=1
+    context_override = RuntimeContext(
+        root=root, excludes=[], depth=None, override=True, remove=False, check_hash=False, timeout=60.0
     )
-    # --- END MODIFIED ---
+    plan_override, _ = plan_files(
+        context_override, files=None, languages=DEFAULT_LANGUAGES, workers=1
+    )
     plan_map = {item.rel_posix: item.action for item in plan_override}
-    # 'src/incorrect_file.py' should now be 'override'
     assert plan_map["src/incorrect_file.py"] == "override"
 
     # --- Test --remove ---
-    # --- MODIFIED: Pass languages argument ---
-    plan_remove, _ = plan_files(
-            root, depth=None, excludes=[], override=False, remove=True, check_hash=False, languages=DEFAULT_LANGUAGES, workers=1
+    context_remove = RuntimeContext(
+        root=root, excludes=[], depth=None, override=False, remove=True, check_hash=False, timeout=60.0
     )
-    # --- END MODIFIED ---
+    plan_remove, _ = plan_files(
+        context_remove, files=None, languages=DEFAULT_LANGUAGES, workers=1
+    )
     plan_map = {item.rel_posix: item.action for item in plan_remove}
-    # 'src/clean_file.py' (which has a header) should be 'remove'
     assert plan_map["src/clean_file.py"] == "remove"
-    # 'src/dirty_file.py' (no header) should be skipped
     assert plan_map["src/dirty_file.py"] == "skip-header-exists"
 
     # --- Test --depth ---
-    # --- MODIFIED: Pass languages argument ---
+    context_depth = RuntimeContext(
+        root=root, excludes=[], depth=3, override=False, remove=False, check_hash=False, timeout=60.0
+    )
     plan_depth, _ = plan_files(
-            root, depth=3, excludes=[], override=False, remove=False, check_hash=False, languages=DEFAULT_LANGUAGES, workers=1
+        context_depth, files=None, languages=DEFAULT_LANGUAGES, workers=1
     )
     # --- END MODIFIED ---
     plan_map = {item.rel_posix: item.action for item in plan_depth}
@@ -103,6 +103,28 @@ def test_plan_files_with_flags(populated_project: Path):
     assert plan_map["src/a/b/c/d/e/deep_file.py"] == "skip-excluded"
     # 'src/dirty_file.py' (depth 1) should still be 'add'
     assert plan_map["src/dirty_file.py"] == "add"
+
+
+def test_analyze_single_file_too_large(fs):
+    """
+    Tests that _analyze_single_file skips a file that is too large.
+    """
+    from autoheader.core import _analyze_single_file
+    from autoheader.constants import MAX_FILE_SIZE_BYTES
+
+    root = Path("/fake_project")
+    fs.create_dir(root)
+    large_file = root / "large.py"
+    fs.create_file(large_file, st_size=MAX_FILE_SIZE_BYTES + 1)
+
+    context = RuntimeContext(
+        root=root, excludes=[], depth=None, override=False, remove=False, check_hash=False, timeout=60.0
+    )
+
+    plan_item, _ = _analyze_single_file((large_file, PY_LANG, context), {})
+
+    assert plan_item.action == "skip-excluded"
+    assert "file size" in plan_item.reason
 
 
 def test_write_with_header_actions(populated_project: Path):
