@@ -202,7 +202,7 @@ def test_build_removed_lines_with_blank():
     lines_in = [EXPECTED_HEADER, "", *LINES_CODE]
     analysis = HeaderAnalysis(insert_index=0, existing_header_line=EXPECTED_HEADER, has_correct_header=True)
 
-    new_lines = build_removed_lines(lines_in, analysis)
+    new_lines = build_removed_lines(lines_in, analysis, TEST_PREFIX)
 
     # Both header (index 0) and blank line (index 1) should be gone.
     # The new list should start with the original code.
@@ -216,7 +216,7 @@ def test_build_removed_lines_no_blank():
     lines_in = [EXPECTED_HEADER, *LINES_CODE]  # No blank line
     analysis = HeaderAnalysis(insert_index=0, existing_header_line=EXPECTED_HEADER, has_correct_header=True)
 
-    new_lines = build_removed_lines(lines_in, analysis)
+    new_lines = build_removed_lines(lines_in, analysis, TEST_PREFIX)
 
     # Only the header (index 0) should be gone.
     assert new_lines == LINES_CODE
@@ -229,7 +229,7 @@ def test_build_removed_lines_idempotent():
     lines_in = LINES_CODE
     analysis = HeaderAnalysis(insert_index=0, existing_header_line=None, has_correct_header=False)
 
-    new_lines = build_removed_lines(lines_in, analysis)
+    new_lines = build_removed_lines(lines_in, analysis, TEST_PREFIX)
 
     # List should be unchanged
     assert new_lines == LINES_CODE

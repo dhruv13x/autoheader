@@ -36,15 +36,15 @@ def test_sarif_reporting():
     report = sarif.generate_sarif_report(plan, "/tmp")
     assert '"uri": "foo"' in report
 
-# def test_multiline_header():
-#     lines = ["# line 1", "# line 2", "content"]
-#     analysis = headerlogic.analyze_header_state(lines, "# line 1\n# line 2", "#", False)
-#     assert analysis.has_correct_header
-#
-#     new_lines = headerlogic.build_new_lines(lines, "# new 1\n# new 2", analysis, True, 1)
-#     assert new_lines[0] == "# new 1"
-#     assert new_lines[1] == "# new 2"
-#     assert new_lines[2] == ""
-#
-#     removed_lines = headerlogic.build_removed_lines(lines, analysis)
-#     assert removed_lines[0] == "content"
+def test_multiline_header():
+    lines = ["# line 1", "# line 2", "content"]
+    analysis = headerlogic.analyze_header_state(lines, "# line 1\n# line 2", "#", False)
+    assert analysis.has_correct_header
+
+    new_lines = headerlogic.build_new_lines(lines, "# new 1\n# new 2", analysis, True, 1)
+    assert new_lines[0] == "# new 1"
+    assert new_lines[1] == "# new 2"
+    assert new_lines[2] == ""
+
+    removed_lines = headerlogic.build_removed_lines(lines, analysis, "#")
+    assert removed_lines[0] == "content"

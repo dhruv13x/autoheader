@@ -171,6 +171,7 @@ def write_with_header(
         new_lines = headerlogic.build_removed_lines(
             original_lines,
             analysis,
+            item.prefix,
         )
     else:  # "add" or "override"
         new_lines = headerlogic.build_new_lines(

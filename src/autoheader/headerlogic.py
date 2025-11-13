@@ -169,6 +169,7 @@ def build_new_lines(
 def build_removed_lines(
     lines: List[str],
     analysis: HeaderAnalysis,
+    prefix: str,
 ) -> List[str]:
     """
     Pure, testable logic to construct file content with header removed.
@@ -179,8 +180,13 @@ def build_removed_lines(
     if analysis.existing_header_line is not None:
         # We need to determine how many lines the old header occupied.
         num_existing_lines = 0
-        if analysis.existing_header_line:
-            num_existing_lines = len(analysis.existing_header_line.splitlines())
+        for i in range(insert_at, len(new_lines)):
+            if new_lines[i].startswith(prefix):
+                num_existing_lines += 1
+            else:
+                break
+
+        # Remove the header lines
         del new_lines[insert_at : insert_at + num_existing_lines]
 
         # If the next line is a blank line, remove it too
