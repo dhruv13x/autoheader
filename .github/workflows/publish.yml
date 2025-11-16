@@ -13,28 +13,45 @@ jobs:
   build-and-publish:
     name: Build & Publish
     runs-on: ubuntu-latest
-    environment: pypi
+    environment: pypi # Assumes a GitHub environment named 'pypi' is configured
 
     steps:
       - name: 🧩 Checkout code
         uses: actions/checkout@v4
 
-      - name: 🐍 Set up Python
+      - name: 🐍 Set up Python 3.13
         uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: "3.13"
 
-      # --- MODIFIED: Install all dependencies ---
-      - name: 📦 Install dependencies
+      - name: 📦 Install build, test, and dev tools
         run: |
           python -m pip install --upgrade pip
-          # Install build tools
+          # Install core build tools
           pip install build twine
-          # Install the package in editable mode with ALL test extras
-          # This pulls in pytest, pytest-cov, pyfakefs, and pyyaml
-          pip install -e ".[dev,precommit]"
+          # Install project-specific development dependencies
+          # This assumes 'dev' extra is defined in pyproject.toml and includes
+          # pytest, pytest-cov, ruff, black, mypy, etc.
+          pip install .[dev]
+          # Install codecov-action dependency if not already in [dev]
+          pip install codecov
 
-      - name: ⚙️ Build distribution
+      - name: 🧪 Run tests & generate coverage
+        # This command assumes pytest is used and the main package code is in 'src'.
+        # If a project's main package is named differently (e.g., 'src/my_tool_name'),
+        # '--cov=src' should still work if the package is directly under 'src'.
+        run: pytest --cov=src --cov-report=xml
+
+      - name: 📊 Upload coverage reports to Codecov
+        # Requires a CODECOV_TOKEN secret to be configured in the repository settings.
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          file: ./coverage.xml
+          verbose: true
+          fail_ci_if_error: true
+
+      - name: ⚙️ Build distribution packages
         run: python -m build
 
       - name: ✅ Verify distribution
@@ -44,4 +61,4 @@ jobs:
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           verbose: true
-          skip-existing: false
+          skip-existing: false  # Fail if version already exists (prevents accidental overwrites)
