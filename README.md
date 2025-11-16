@@ -160,7 +160,7 @@ Add this to your `.pre-commit-config.yaml`:
 
 ```yaml
 - repo: https://github.com/dhruv13x/autoheader
-  rev: v4.1.0  # <-- Use the latest version
+  rev: v7.0.0  # <-- Use the latest version
   hooks:
     - id: autoheader
       name: autoheader file header checker
@@ -182,10 +182,6 @@ Run `autoheader --init` to generate a file pre-filled with the defaults, which l
 # For more info, see: https://github.com/dhruv13x/autoheader
 
 [general]
-# Run in simulation mode. (Default: true)
-# To apply changes, run `autoheader --no-dry-run` or set:
-# dry_run = false
-
 # Create .bak files before modifying. (Default: false)
 backup = false
 
@@ -308,6 +304,14 @@ Skips all interactive prompts (e.g., root detection, no-dry-run warning).
 
 ```bash
 autoheader --yes --no-dry-run
+```
+
+### Clear the Cache
+
+`autoheader` uses a cache to avoid re-checking files that haven't changed. If you want to force a re-check of all files, you can clear the cache with the `--clear-cache` option.
+
+```bash
+autoheader --clear-cache
 ```
 
 ### Disable Rich Output
