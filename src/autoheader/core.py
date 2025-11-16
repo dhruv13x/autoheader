@@ -45,7 +45,7 @@ def _analyze_single_file(
         return PlanItem(path, rel_posix, "skip-excluded", reason=f"stat failed: {e}", prefix=lang.prefix, check_encoding=lang.check_encoding, template=lang.template, analysis_mode=lang.analysis_mode), None
 
     if rel_posix in cache and cache[rel_posix]["mtime"] == mtime:
-        return PlanItem(path, rel_posix, "skip-cached", prefix=lang.prefix, check_encoding=lang.check_encoding, template=lang.template, analysis_mode=lang.analysis_mode), (rel_posix, cache[rel_posix])
+        return PlanItem(path, rel_posix, "skip-header-exists", reason="cached", prefix=lang.prefix, check_encoding=lang.check_encoding, template=lang.template, analysis_mode=lang.analysis_mode), (rel_posix, cache[rel_posix])
 
     file_hash = filesystem.get_file_hash(path)
     if not file_hash:  # Hashing failed
@@ -53,6 +53,9 @@ def _analyze_single_file(
 
     cache_entry = {"mtime": mtime, "hash": file_hash}
     lines = filesystem.read_file_lines(path)
+
+    if not lines:
+        return PlanItem(path, rel_posix, "skip-empty", prefix=lang.prefix, check_encoding=lang.check_encoding, template=lang.template, analysis_mode=lang.analysis_mode), (rel_posix, cache_entry)
 
     is_ignored = False
     for line in lines:

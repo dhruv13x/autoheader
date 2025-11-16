@@ -3,10 +3,6 @@
 # For more info, see: https://github.com/dhruv13x/autoheader
 
 [general]
-# Run in simulation mode. (Default: true)
-# To apply changes, run `autoheader --no-dry-run` or set:
-# dry_run = false
-
 # Create .bak files before modifying. (Default: false)
 backup = false
 

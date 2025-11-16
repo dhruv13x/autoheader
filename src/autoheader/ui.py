@@ -7,7 +7,7 @@ from rich.console import Console
 log = logging.getLogger(__name__)
 
 # This console will be reconfigured by cli.py after args are parsed
-console = Console()
+console = Console(force_terminal=True)
 
 # --- NEW: Rich Formatting ---
 
@@ -62,7 +62,7 @@ def format_error(rel_path: str, err: Exception, no_emoji: bool) -> str:
 
 def format_summary(
     added: int, overridden: int, removed: int,
-    skipped_ok: int, skipped_excluded: int, skipped_cached: int
+    skipped_ok: int, skipped_excluded: int
 ) -> str:
     """Formats the final summary line."""
     parts = [
@@ -71,7 +71,6 @@ def format_summary(
         f"[{STYLE_MAP['REMOVE']}]removed={removed}[/{STYLE_MAP['REMOVE']}]",
         f"[{STYLE_MAP['SKIP']}]skipped_ok={skipped_ok}[/{STYLE_MAP['SKIP']}]",
         f"[{STYLE_MAP['SKIP_EXCLUDED']}]skipped_excluded={skipped_excluded}[/{STYLE_MAP['SKIP_EXCLUDED']}]",
-        f"[{STYLE_MAP['SKIP_CACHED']}]skipped_cached={skipped_cached}[/{STYLE_MAP['SKIP_CACHED']}]",
     ]
     return f"\nSummary: {', '.join(parts)}."
 
@@ -79,22 +78,6 @@ def format_summary(
 def format_dry_run_note() -> str:
     """Formats the dry-run note."""
     return f"[{STYLE_MAP['DRY_RUN']}]NOTE: this was a dry run. Use --no-dry-run to apply changes.[/{STYLE_MAP['DRY_RUN']}]"
-
-
-def print_logo() -> None:
-    """Prints the autoheader ASCII art logo."""
-    logo = r"""
-░█████╗░██╗░░░██╗████████╗░█████╗░██╗░░██╗███████╗░█████╗░██████╗░███████╗██████╗░
-██╔══██╗██║░░░██║╚══██╔══╝██╔══██╗██║░░██║██╔════╝██╔══██╗██╔══██╗██╔════╝██╔══██╗
-███████║██║░░░██║░░░██║░░░██║░░██║███████║█████╗░░███████║██║░░██║█████╗░░██████╔╝
-██╔══██║██║░░░██║░░░██║░░░██║░░██║██╔══██║██╔══╝░░██╔══██║██║░░██║██╔══╝░░██╔══██╗
-██║░░██║╚██████╔╝░░░██║░░░╚█████╔╝██║░░██║███████╗██║░░██║██████╔╝███████╗██║░░██║
-╚═╝░░╚═╝░╚═════╝░░░░╚═╝░░░░╚════╝░╚═╝░░╚═╝╚══════╝╚═╝░░╚═╝╚═════╝░╚══════╝╚═╝░░╚═╝
-"""
-    console.print(f"[bold blue]{logo}[/bold blue]")
-    console.print("[dim]A header management tool for your code.[/dim]\n")
-
-# --- End Rich Formatting ---
 
 
 def confirm_continue(auto_yes: bool = False) -> bool:

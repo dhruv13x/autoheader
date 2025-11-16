@@ -1,6 +1,5 @@
 # src/autoheader/cli.py
 
-from __future__ import annotations
 
 import argparse
 from pathlib import Path
@@ -23,6 +22,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed, TimeoutError
 
 from . import app
 from . import ui
+from .banner import print_logo
 from . import config
 # --- MODIFIED ---
 from .constants import (
@@ -146,6 +146,7 @@ def build_parser() -> argparse.ArgumentParser:
         help="Timeout in seconds for processing a single file. (Config: [general] timeout)",
     )
     g_config.add_argument("--config-url", type=str, help="URL to fetch remote configuration from.")
+    g_config.add_argument("--clear-cache", action="store_true", help="Clear the cache before running.")
     # --- END ADD ---
 
     # --- Filtering & Discovery ---
@@ -218,7 +219,7 @@ def setup_logging(verbosity: int, quiet: bool) -> None:
 
 def main(argv: List[str] | None = None) -> int:
     start_time = time.monotonic()
-    ui.print_logo() # Print logo unconditionally at the start
+    print_logo() # Print logo unconditionally at the start
     parser = build_parser()
 
     # --- MODIFIED: Config Loading ---
@@ -287,6 +288,14 @@ def main(argv: List[str] | None = None) -> int:
             ui.console.print(f"[red]Failed to install pre-commit hook: {e}[/red]")
             return 1
     # --- END NEW ---
+
+    # --- ADD THIS BLOCK ---
+    if args.clear_cache:
+        cache_path = root / ".autoheader_cache"
+        if cache_path.exists():
+            cache_path.unlink()
+            ui.console.print("[bold]Cache cleared.[/bold]")
+    # --- END ADD ---
 
     # Load language configs (MOVED after --init check)
     languages = config.load_language_configs(toml_data, general_config)
@@ -367,9 +376,6 @@ def main(argv: List[str] | None = None) -> int:
         elif item.action == "skip-header-exists":
             skipped_exists += 1
             log.debug(f"SKIP (ok):   {item.rel_posix} [reason: {item.reason or 'header ok'}]")
-        elif item.action == "skip-cached":
-            skipped_cached += 1
-            log.debug(f"SKIP (cached): {item.rel_posix}")
         else:
             items_to_process.append(item)
 
@@ -443,7 +449,7 @@ def main(argv: List[str] | None = None) -> int:
     # 4. REPORT
     # --- MODIFIED: Use Rich Output ---
     ui.console.print(
-        ui.format_summary(added, overridden, removed, skipped_exists, skipped_excluded, skipped_cached)
+        ui.format_summary(added, overridden, removed, skipped_exists, skipped_excluded)
     )
     if args.dry_run:
         ui.console.print(ui.format_dry_run_note())

@@ -97,7 +97,7 @@ def load_general_config(toml_data: Dict[str, Any]) -> Dict[str, Any]:
     if "general" in toml_data and isinstance(toml_data["general"], dict):
         general = toml_data["general"]
         # --- MODIFIED: Added 'timeout' to the list of keys ---
-        for key in ["dry_run", "backup", "workers", "yes", "override", "remove", "timeout"]:
+        for key in ["backup", "workers", "yes", "override", "remove", "timeout"]:
             if key in general:
                 flat_config[key] = general[key]
 
@@ -200,10 +200,6 @@ def generate_default_config() -> str:
 # For more info, see: https://github.com/dhruv13x/autoheader
 
 [general]
-# Run in simulation mode. (Default: true)
-# To apply changes, run `autoheader --no-dry-run` or set:
-# dry_run = false
-
 # Create .bak files before modifying. (Default: false)
 backup = false
 

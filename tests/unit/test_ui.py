@@ -69,7 +69,7 @@ def test_format_error(capsys):
 def test_format_summary():
     """Tests the final summary line."""
     output = ui.format_summary(
-        added=1, overridden=2, removed=3, skipped_ok=4, skipped_excluded=5, skipped_cached=6
+        added=1, overridden=2, removed=3, skipped_ok=4, skipped_excluded=5
     )
 
     assert "added=1" in output
@@ -77,7 +77,7 @@ def test_format_summary():
     assert "removed=3" in output
     assert "skipped_ok=4" in output
     assert "skipped_excluded=5" in output
-    assert "skipped_cached=6" in output
+    assert "skipped_cached=6" not in output
 
 def test_format_dry_run_note():
     """Tests the dry run note."""

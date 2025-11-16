@@ -211,3 +211,23 @@ def test_write_with_header_actions(populated_project: Path):
     lines = (root / "src/clean_file.py").read_text().splitlines()
     # Header and blank line should be gone
     assert lines[0] == 'print("hello")'
+
+
+def test_analyze_single_file_empty_file(fs):
+    """
+    Tests that _analyze_single_file skips an empty file.
+    """
+    from autoheader.core import _analyze_single_file
+
+    root = Path("/fake_project")
+    fs.create_dir(root)
+    empty_file = root / "empty.py"
+    fs.create_file(empty_file, contents="")
+
+    context = RuntimeContext(
+        root=root, excludes=[], depth=None, override=False, remove=False, check_hash=False, timeout=60.0
+    )
+
+    plan_item, _ = _analyze_single_file((empty_file, PY_LANG, context), {})
+
+    assert plan_item.action == "skip-empty"
