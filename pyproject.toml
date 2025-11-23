@@ -84,20 +84,32 @@ warn_return_any = true
 warn_unused_configs = true
 strict = false
 
-# --- NEW PYTEST CONFIG ---
+
+
 [tool.pytest.ini_options]
-minversion = "6.0"
-testpaths = [
-    "tests/"
-]
 addopts = [
-    "-q",                  # Run in quiet mode
-    "--strict-markers",    # Be strict about pytest markers
-    "--cov=src/autoheader",  # Measure coverage on the src package
-    "--cov-report=term-missing", # Show missing lines in terminal
-    "--cov-fail-under=90",   # Fail build if coverage < 85%
+    "--timeout=10",
+    "--durations=10",
+    "--log-cli-level=INFO",
+    "-v",
+    "-ra",
+    "--tb=short",
+    "--showlocals",
+    "--strict-markers",
+    "--cov=src/autoheader",
+    "--cov-report=term-missing:skip-covered",
+    "--cov-fail-under=97",
 ]
-python_files = "test_*.py"
-python_functions = "test_*"
+
 log_cli = true
 log_cli_level = "INFO"
+
+[tool.coverage]
+minversion = "6.0"
+
+[tool.coverage.run]
+branch = true
+source = ["src"]
+
+[tool.coverage.report]
+show_missing = true
