@@ -61,7 +61,8 @@ dev = [
   "pyfakefs>=5.0.0",
   "ruff>=0.6.0",
   "black>=24.3.0",
-  "mypy>=1.11.0"
+  "mypy>=1.11.0",
+  "PyYAML>=6.0",
 ]
 precommit = [
   "pyyaml>=6.0"
