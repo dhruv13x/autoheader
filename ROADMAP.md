@@ -1,50 +1,69 @@
 # 🚀 autoheader: Public Roadmap
 
-This document outlines the evolution of `autoheader`. We build in the open.
+This document outlines the visionary, integration-oriented plan for `autoheader`. We categorize features from **"Core Essentials"** to **"God Level"** ambition.
 
 ---
 
-## 🔮 Future Roadmap (v5.0+)
+## Phase 1: Foundation (Q1)
+**Focus**: Core functionality, stability, security, and basic usage.
 
-The goal for the next major epoch is **Standardization & Ecosystem**.
-
-### 📜 1. Native SPDX License Support
-* **Goal:** Instead of writing custom templates, users can simply set `license = "MIT"` or `license = "Apache-2.0"`.
-* **Plan:** Integrate SPDX license database to automatically generate legally compliant header blocks.
-
-### 🔌 2. Native Git Hook Installer
-* **Goal:** Remove the dependency on the `pre-commit` python framework for simple use cases.
-* **Plan:** Add `autoheader --install-git-hook` to write a lightweight shell script directly into `.git/hooks/pre-commit`.
-
-### 🧠 3. LSP (Language Server) Integration
-* **Goal:** Highlight missing headers directly in VS Code / PyCharm as you type.
-* **Plan:** Expose an LSP interface or a JSON-RPC mode for editor plugins.
+- [x] Core header insertion/removal logic
+- [x] Configuration via `autoheader.toml`
+- [x] Polyglot support via language blocks
+- [x] `.gitignore` integration
+- [x] Pre-commit integration (`--check`)
+- [x] Dry-run mode (`--dry-run`)
+- [x] Caching for performance
+- [x] Parallel file processing
+- [x] Smart copyright year updating
+- [x] Inline ignores (`autoheader: ignore`)
+- [ ] Native Git Hook Installer
 
 ---
 
-## ✅ Completed Milestones
+## Phase 2: The Standard (Q2)
+**Focus**: Feature parity with top competitors, user experience improvements, and robust error handling.
 
-### v4.1.0: The "UX & Speed" Release (Completed 2025-11)
-* ✅ **Explicit File Arguments:** Drastically sped up pre-commit hooks by allowing specific file paths (`autoheader file1.py`).
-* ✅ **Visual Diffs:** Added rich, side-by-side diffs for dry-runs to show exactly what will change.
-* ✅ **Smart Copyright:** Implemented logic to update year ranges (e.g., `2020-2025`) rather than overwriting old years.
+- [x] Visual Diffs for dry-runs
+- [x] Rich CLI output (progress bars, colors)
+- [x] SARIF reporting (`--format sarif`)
+- [x] Remote configuration (`--config-url`)
+- [x] File tamper detection (`{hash}`)
+- [ ] Native SPDX License Support
 
-### v4.0.0: The "Security & Fleet" Release (Completed 2025-11)
-* ✅ **File Tamper Detection:** Added content hashing (`{hash}`) to headers to detect unauthorized file modifications.
-* ✅ **SARIF Reporting:** Added `--format sarif` for native integration with GitHub Security & SonarQube.
-* ✅ **Remote Configuration:** Added `--config-url` to support fetching central config from a URL (Fleet Management).
-* ✅ **Full License Blocks:** Refactored engine to support complex, multi-line copyright headers.
+---
 
-### v3.0.0: The "Performance" Release (Completed 2025-11)
-* ✅ **Blazing Fast Caching:** Implemented `mtime` + `sha256` caching to make re-runs near instant.
-* ✅ **Parallel Planning:** Multithreaded the file analysis phase.
-* ✅ **Custom Templates:** Added fully dynamic variables (`{filename}`, `{year}`, `{path}`).
-* ✅ **AST-Based Insertion:** Switched to Python AST parsing for robust header insertion that respects docstrings and shebangs.
+## Phase 3: The Ecosystem (Q3)
+**Focus**: Webhooks, API exposure, 3rd party plugins, SDK generation, and extensibility.
+
+- [ ] LSP (Language Server) Integration
+- [ ] GitHub Action for automated header checks
+- [ ] VSCode Extension for real-time header management
+- [ ] Pre-commit.ci support (automated config)
+- [ ] Integration with linters (e.g., Ruff, ESLint) as a plugin
+
+---
+
+## Phase 4: The Vision (Q4)
+**Focus**: **"Futuristic"** features, AI integration, advanced automation, and industry-disrupting capabilities.
+
+- [ ] AI-powered header generation (e.g., suggesting license based on dependencies)
+- [ ] Automated code provenance tracking (e.g., linking headers to Jira tickets or Git commits)
+- [ ] Security-focused headers (e.g., embedding vulnerability scan results)
+- [ ] Blockchain-based file integrity verification
+
+---
+
+## The Sandbox (OUT OF THE BOX / OPTIONAL)
+**Focus**: Wild, creative, experimental ideas that set the project apart.
+
+- [ ] Gamification of header compliance (e.g., team leaderboards)
+- [ ] ASCII art headers
+- [ ] "Header history" command to show how a file's header has evolved
 
 ---
 
 ## How to Contribute
 
-If you have a feature request or want to contribute to the v5.0 goals, please **[open an issue on GitHub](https://github.com/dhruv13x/autoheader/issues)** to discuss the design and implementation.
+If you have a feature request or want to contribute, please **[open an issue on GitHub](https://github.com/dhruv13x/autoheader/issues)** to discuss the design and implementation. We welcome all pull requests!
 
-We welcome all pull requests!
