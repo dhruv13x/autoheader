@@ -95,21 +95,16 @@ pip install git+https://github.com/dhruv13x/autoheader
 
 ## 🚀 Quick Start
 
-### Step 1. Initialize (Recommended)
-
-Run `autoheader --init` to create a default `autoheader.toml` file in your project.
+### Step 1: Generate a Configuration
+The easiest way to get started is to generate a default `autoheader.toml` configuration file. This file is pre-configured for Python projects and contains all available settings.
 
 ```bash
 autoheader --init
 ```
-
 > ✅ Created default config at /path/to/project/autoheader.toml.
-> 
-> This file is pre-configured for Python files and lists all default settings.
 
-### Step 2. Run a Dry-Run
-
-Run `autoheader` for a safe, colorful dry-run. If headers need changing, you will see a visual diff:
+### Step 2: Run a Dry-Run
+Run `autoheader` to see a preview of the changes. The tool will scan your project and show a visual diff of any headers that need to be added, updated, or removed.
 
 ```bash
 autoheader
@@ -160,7 +155,7 @@ Add this to your `.pre-commit-config.yaml`:
 
 ```yaml
 - repo: https://github.com/dhruv13x/autoheader
-  rev: v7.0.0  # <-- Use the latest version
+  rev: v9.0.7  # <-- Use the latest version
   hooks:
     - id: autoheader
       name: autoheader file header checker
@@ -262,65 +257,49 @@ template = "// {path}"
 check_encoding = false  # No shebangs to worry about
 ```
 
-## 📘 Advanced Usage
+## 📘 Advanced Usage & CLI Arguments
+`autoheader` offers a rich set of CLI arguments to customize its behavior. Arguments are grouped by function for clarity.
 
-### Run on Specific Files
-
-You can pass specific file paths to `autoheader` to only process those files. This is extremely fast for CI/CD pipelines that only want to check changed files.
-
-```bash
-autoheader src/main.py src/utils.py --no-dry-run
-```
+| Argument | Description | Default |
+|---|---|---|
+| **Main Actions** | | |
+| `files` | Specific files to process. If not provided, scans the root directory. | (scan all) |
+| `-d`, `--dry-run` | Do not write changes (default). | `True` |
+| `-nd`, `--no-dry-run` | Apply changes to files. | `False` |
+| `--override` | Rewrite existing header lines to fresh, correct ones. | `False` |
+| `--remove` | Remove all autoheader lines from files. | `False` |
+| **CI / Pre-commit / Init** | | |
+| `--check` | Exit with code 1 if any file needs header changes (for pre-commit/CI). | `False` |
+| `--check-hash` | Verify file integrity by checking content hash in headers. | `False` |
+| `--init` | Create a default `autoheader.toml` in the current directory. | `False` |
+| `--install-precommit` | Install autoheader as a 'repo: local' pre-commit hook. | `False` |
+| **General Behavior** | | |
+| `-y`, `--yes` | Assume yes to all confirmation prompts. | `False` |
+| `--backup` | Create .bak backups before writing. | `False` |
+| `--root` | Root directory. | Current dir |
+| `--workers` | Number of parallel workers to use. | `8` |
+| `--timeout` | Timeout in seconds for processing a single file. | `60.0` |
+| `--config-url` | URL to fetch remote configuration from. | `None` |
+| `--clear-cache` | Clear the cache before running. | `False` |
+| **Filtering & Discovery** | | |
+| `--depth` | Max directory depth from root (e.g., 3). | `None` |
+| `--exclude` | Extra glob(s) to exclude (can repeat). | `[]` |
+| `--markers` | Project root markers (overrides TOML and defaults). | `['.gitignore', 'README.md', 'README.rst', 'pyproject.toml']` |
+| **Header Customization (from TOML)** | | |
+| `--blank-lines-after` | Number of blank lines to add after the header. | `1` |
+| **Output Styling** | | |
+| `-v`, `--verbose` | Increase verbosity. (use -vv for more). | `0` |
+| `-q`, `--quiet` | Suppress informational output; only show errors. | `False` |
+| `--no-color` | Disable colored output. | `False` |
+| `--no-emoji` | Disable emoji prefixes. | `False` |
+| `--format` | Output format. (`default` or `sarif`) | `default` |
 
 ### Ignore Specific Files
-
 To exclude a single file without adding it to `autoheader.toml` or `.gitignore`, add a magic comment anywhere in the file's content:
-
 ```python
 # autoheader: ignore
 ```
-
 `autoheader` will see this and skip the file.
-
-### Specify Max Directory Depth
-
-Avoids walking deep directory trees.
-
-```bash
-autoheader --depth 3 --no-dry-run
-```
-
-### Exclude Additional Paths
-
-`autoheader` automatically excludes paths in `.gitignore` and `[exclude].paths` in your TOML file. You can add more one-time excludes:
-
-```bash
-autoheader --exclude tests --exclude "api/generated/"
-```
-
-### Force Yes in CI Environments
-
-Skips all interactive prompts (e.g., root detection, no-dry-run warning).
-
-```bash
-autoheader --yes --no-dry-run
-```
-
-### Clear the Cache
-
-`autoheader` uses a cache to avoid re-checking files that haven't changed. If you want to force a re-check of all files, you can clear the cache with the `--clear-cache` option.
-
-```bash
-autoheader --clear-cache
-```
-
-### Disable Rich Output
-
-For CI logs that don't support color or emojis:
-
-```bash
-autoheader --no-color --no-emoji
-```
 
 ## 📂 Example Output
 
@@ -385,9 +364,19 @@ ruff check .
 black .
 ```
 
+## 🗺️ Roadmap
+`autoheader` is actively developed. Here's a look at what's planned for the future:
+
+* **Standardization & Ecosystem (v5.0+):**
+    * **Native SPDX License Support:** Integrate the SPDX license database to automatically generate legally compliant header blocks.
+    * **Native Git Hook Installer:** Remove the dependency on the `pre-commit` framework for simpler use cases.
+    * **LSP (Language Server) Integration:** Highlight missing headers directly in your IDE as you type.
+
+For more details, see the full [Public Roadmap](ROADMAP.md).
+
 ## 🤝 Contributing
 
-Pull requests are welcome.  
+Pull requests are welcome.
 If proposing large changes, open an issue first to discuss design and approach.
 
 ## 🐛 Reporting Issues
