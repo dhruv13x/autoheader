@@ -1,3 +1,5 @@
+# src/autoheader/banner.py
+
 # src/create_dump/banner.py
 
 from rich.console import Console
@@ -196,4 +198,4 @@ def print_logo():
 
         console.print(tline)
 
-    console.print("[dim]📝 An enterprise-grade CLI tool for managing source code file headers.[/dim]\n")
+    console.print("[dim]📜 Automated management of file headers, licenses, and copyrights.[/dim]\\n")
