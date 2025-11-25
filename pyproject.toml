@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "autoheader"
-version = "9.0.7"
+version = "9.0.8"
 description = "Enterprise-grade file header tool that injects repo-relative path headers into Python files"
 readme = "README.md"
 requires-python = ">=3.8"
