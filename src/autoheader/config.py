@@ -134,27 +134,28 @@ def load_language_configs(
     Parses all [language.*] sections from the TOML data.
     """
     languages: List[LanguageConfig] = []
-    
-    if "language" in toml_data and isinstance(toml_data["language"], dict):
-        for lang_name, lang_data in toml_data["language"].items():
+    language_section = toml_data.get("language")
+
+    if language_section is not None and isinstance(language_section, dict):
+        for lang_name, lang_data in language_section.items():
             if not isinstance(lang_data, dict):
                 continue
-            
+
             try:
                 # --- THIS IS THE FIX ---
                 # 1. Get the prefix first
-                prefix = lang_data['prefix']
+                prefix = lang_data["prefix"]
                 # 2. Create the default template string *without* a nested f-string
                 #    We want the literal string "{path}"
                 default_template = f"{prefix}{'{path}'}"
                 # 3. Use the clean default string in the .get()
                 template = lang_data.get("template", default_template)
                 # --- END FIX ---
-                
+
                 lang = LanguageConfig(
                     name=lang_name,
                     file_globs=lang_data["file_globs"],
-                    prefix=prefix, # Use the variable
+                    prefix=prefix,  # Use the variable
                     check_encoding=lang_data.get("check_encoding", False),
                     template=template,
                     analysis_mode=lang_data.get("analysis_mode", "line"),
@@ -164,12 +165,12 @@ def load_language_configs(
                 log.warning(f"Config for [language.{lang_name}] is missing required key: {e}")
 
     # --- DEFAULT / BACKWARD COMPATIBILITY ---
-    if not languages:
+    elif language_section is None:
         log.debug("No [language.*] sections found, using default Python config.")
-        
+
         # Use legacy prefix if it exists
         legacy_prefix = general_config.get("_legacy_prefix", HEADER_PREFIX)
-        
+
         languages.append(
             LanguageConfig(
                 name="python",

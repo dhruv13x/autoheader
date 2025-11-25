@@ -1,0 +1,10 @@
+repos:
+- hooks:
+  - entry: autoheader --check
+    id: autoheader
+    language: system
+    name: autoheader file header checker
+    pass_filenames: true
+    types:
+    - python
+  repo: local
