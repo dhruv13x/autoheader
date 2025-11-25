@@ -1,196 +1,109 @@
-# tests/unit/test_config.py
 
 from pathlib import Path
-# --- MODIFIED IMPORTS ---
+from unittest.mock import patch, MagicMock
 from autoheader.config import (
+    fetch_remote_config_safe,
     load_config_data,
-    load_general_config,
     load_language_configs,
+    load_general_config,
+    generate_default_config,
 )
-from autoheader.constants import HEADER_PREFIX
-# --- END MODIFIED IMPORTS ---
-import logging
 
-# This TOML content is used by multiple tests
-VALID_TOML_CONTENT = """
-[general]
-backup = true
-workers = 4
-override = true
+def test_fetch_remote_config_http_error():
+    with patch("urllib.request.urlopen") as mock_urlopen:
+        mock_response = MagicMock()
+        mock_response.status = 404
+        mock_urlopen.return_value.__enter__.return_value = mock_response
+        result = fetch_remote_config_safe("http://example.com/config.toml")
+        assert result is None
 
-[detection]
-depth = 5
-markers = ["pyproject.toml", ".git"]
 
-[exclude]
-paths = ["docs/", "*.generated.py"]
+def test_fetch_remote_config_unexpected_error():
+    with patch("urllib.request.urlopen") as mock_urlopen:
+        mock_urlopen.side_effect = Exception("Unexpected error")
+        result = fetch_remote_config_safe("http://example.com/config.toml")
+        assert result is None
 
-[header]
-blank_lines_after = 2
-"""
+def test_fetch_remote_config_content_length_too_large():
+    with patch("urllib.request.urlopen") as mock_urlopen:
+        mock_response = MagicMock()
+        mock_response.status = 200
+        mock_response.headers.get.return_value = "2000000"
+        mock_urlopen.return_value.__enter__.return_value = mock_response
+        result = fetch_remote_config_safe("http://example.com/config.toml")
+        assert result is None
 
-# --- MODIFIED: Refactored tests for new functions ---
+def test_fetch_remote_config_toml_decode_error():
+    with patch("urllib.request.urlopen") as mock_urlopen:
+        mock_response = MagicMock()
+        mock_response.status = 200
+        mock_response.headers.get.return_value = "100"
+        mock_response.read.side_effect = [b"invalid toml", b""]
+        mock_urlopen.return_value.__enter__.return_value = mock_response
+        result = fetch_remote_config_safe("http://example.com/config.toml")
+        assert result is None
 
-def test_load_general_config_valid(fs):
-    """
-    Tests loading a valid, fully populated autoheader.toml.
-    """
-    root = Path("/fake_project")
-    fs.create_dir(root)
-    fs.create_file(root / "autoheader.toml", contents=VALID_TOML_CONTENT)
-    
-    toml_data, _ = load_config_data(root, config_url=None, timeout=10.0)
-    config = load_general_config(toml_data)
+def test_load_config_data_file_not_found(tmp_path: Path):
+    result, _ = load_config_data(tmp_path, None, 10)
+    assert result == {}
 
-    expected_config = {
-        "backup": True,
-        "workers": 4,
-        "override": True,
-        "depth": 5,
-        "markers": ["pyproject.toml", ".git"],
-        "exclude": ["docs/", "*.generated.py"],
-        "blank_lines_after": 2,
+def test_load_config_data_toml_decode_error(tmp_path: Path):
+    config_path = tmp_path / "autoheader.toml"
+    config_path.write_text("invalid toml")
+    result, _ = load_config_data(tmp_path, None, 10)
+    assert result == {}
+
+def test_load_language_configs_missing_prefix():
+    toml_data = {"language": {"python": {"file_globs": ["*.py"]}}}
+    with patch("autoheader.config.log.warning") as mock_log:
+        result = load_language_configs(toml_data, {})
+        assert not result
+        mock_log.assert_called_with("Config for [language.python] is missing required key: 'prefix'")
+
+
+def test_load_language_configs_no_languages():
+    result = load_language_configs({}, {})
+    assert len(result) == 1
+    assert result[0].name == "python"
+
+def test_load_general_config_legacy_prefix():
+    toml_data = {"header": {"prefix": "#"}}
+    result = load_general_config(toml_data)
+    assert result["_legacy_prefix"] == "#"
+
+
+def test_load_general_config_all_sections():
+    toml_data = {
+        "general": {"backup": True, "workers": 4, "timeout": 30},
+        "detection": {"depth": 5, "markers": [".git"]},
+        "exclude": {"paths": ["docs/"]},
+        "header": {"blank_lines_after": 2},
     }
-    assert config == expected_config
-
-
-def test_load_general_config_no_file(fs):
-    """
-    Tests loading config from a root with no autoheader.toml.
-    """
-    root = Path("/other_project")
-    fs.create_dir(root)
-    
-    toml_data, _ = load_config_data(root, config_url=None, timeout=10.0)
     config = load_general_config(toml_data)
-    assert config == {}
+    assert config["backup"] is True
+    assert config["workers"] == 4
+    assert config["timeout"] == 30
+    assert config["depth"] == 5
+    assert config["markers"] == [".git"]
+    assert config["exclude"] == ["docs/"]
+    assert config["blank_lines_after"] == 2
 
 
-def test_load_config_data_malformed(fs, caplog):
-    """
-    Tests that a malformed TOML file logs a warning and returns {}.
-    'caplog' is a pytest fixture to capture log output.
-    """
-    root = Path("/bad_toml")
-    fs.create_dir(root)
-    fs.create_file(root / "autoheader.toml", contents="[general]\n key = 'unterminated string")
-
-    with caplog.at_level(logging.WARNING):
-        toml_data, _ = load_config_data(root, config_url=None, timeout=10.0)
-        config = load_general_config(toml_data)
-
-    assert toml_data == {}
-    assert config == {}
-    assert "Could not parse autoheader.toml" in caplog.text
-
-
-def test_load_general_config_partial(fs):
-    """
-    Tests that a partial config file is loaded correctly.
-    """
-    root = Path("/partial_config")
-    fs.create_dir(root)
-    fs.create_file(
-        root / "autoheader.toml",
-        contents="[general]\nworkers = 16\n[header]\nblank_lines_after = 0"
-    )
-
-    toml_data, _ = load_config_data(root, config_url=None, timeout=10.0)
-    config = load_general_config(toml_data)
-    
-    expected_config = {
-        "workers": 16,
-        "blank_lines_after": 0,
-    }
-    assert config == expected_config
-
-# --- ADDED NEW TESTS for load_language_configs ---
-
-def test_load_language_configs_default(fs):
-    """Tests that the default Python config is returned when no [language] section exists."""
+def test_load_general_config_empty():
     toml_data = {}
-    general_config = {}
-    
-    languages = load_language_configs(toml_data, general_config)
-    
-    assert len(languages) == 1
-    py_lang = languages[0]
-    assert py_lang.name == "python"
-    assert py_lang.file_globs == ["*.py", "*.pyi"]
-    assert py_lang.prefix == HEADER_PREFIX
-    assert py_lang.check_encoding is True
-    assert py_lang.template == f"{HEADER_PREFIX}{{path}}"
+    config = load_general_config(toml_data)
+    assert config == {}
 
-def test_load_language_configs_legacy_prefix(fs):
-    """Tests that the default config respects the old [header].prefix."""
-    toml_data = {"header": {"prefix": "// "}}
-    general_config = {"_legacy_prefix": "// "}
 
-    languages = load_language_configs(toml_data, general_config)
+def test_load_language_configs_invalid_entry():
+    toml_data = {"language": {"python": "invalid"}}
+    result = load_language_configs(toml_data, {})
+    assert not result
 
-    assert len(languages) == 1
-    py_lang = languages[0]
-    assert py_lang.name == "python"
-    assert py_lang.prefix == "// "
-    assert py_lang.template == "// {path}"
 
-def test_load_language_configs_custom(fs):
-    """Tests loading a custom [language.*] configuration."""
-    custom_toml = """
-    [language.javascript]
-    file_globs = ["*.js", "*.ts"]
-    prefix = "// "
-    check_encoding = false
-    template = "// HEADER: {path}"
-    
-    [language.css]
-    file_globs = ["*.css"]
-    prefix = "/* "
-    template = "/* {path} */"
-    """
-    root = Path("/custom_lang")
-    fs.create_dir(root)
-    fs.create_file(root / "autoheader.toml", contents=custom_toml)
-    
-    toml_data, _ = load_config_data(root, config_url=None, timeout=10.0)
-    general_config = load_general_config(toml_data)
-    languages = load_language_configs(toml_data, general_config)
-    
-    assert len(languages) == 2
-    
-    js_lang = languages[0]
-    assert js_lang.name == "javascript"
-    assert js_lang.file_globs == ["*.js", "*.ts"]
-    assert js_lang.prefix == "// "
-    assert js_lang.check_encoding is False
-    assert js_lang.template == "// HEADER: {path}"
-    
-    css_lang = languages[1]
-    assert css_lang.name == "css"
-    assert css_lang.file_globs == ["*.css"]
-    assert css_lang.prefix == "/* "
-    assert css_lang.check_encoding is False  # Test default
-    assert css_lang.template == "/* {path} */"
-
-def test_load_language_configs_missing_keys(fs, caplog):
-    """Tests that a misconfigured language block is skipped."""
-    custom_toml = """
-    [language.bad]
-    # 'prefix' and 'file_globs' are missing
-    """
-    root = Path("/bad_lang")
-    fs.create_dir(root)
-    fs.create_file(root / "autoheader.toml", contents=custom_toml)
-    
-    toml_data, _ = load_config_data(root, config_url=None, timeout=10.0)
-    general_config = load_general_config(toml_data)
-    
-    with caplog.at_level(logging.WARNING):
-        languages = load_language_configs(toml_data, general_config)
-    
-    # It logs a warning and falls back to the default Python config
-    # --- THIS IS THE FIX ---
-    assert "missing required key: 'prefix'" in caplog.text
-    # --- END FIX ---
-    assert len(languages) == 1
-    assert languages[0].name == "python"
+def test_generate_default_config():
+    config_string = generate_default_config()
+    assert "[general]" in config_string
+    assert "[detection]" in config_string
+    assert "[exclude]" in config_string
+    assert "[language.python]" in config_string

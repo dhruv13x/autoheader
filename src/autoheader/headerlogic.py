@@ -33,17 +33,16 @@ def header_line_for(
             if existing_year < current_year:
                 year_to_insert = f"{existing_year}-{current_year}"
 
-    formatted_template = template.format(
+    # Handle hash replacement before other formatting to avoid KeyErrors
+    if "{hash}" in template and content is not None:
+        file_hash = hashlib.sha256(content.encode("utf-8")).hexdigest()
+        template = template.replace("{hash}", file_hash)
+
+    return template.format(
         path=rel_posix,
         filename=Path(rel_posix).name,
         year=year_to_insert,
     )
-
-    if "{hash}" in formatted_template and content is not None:
-        file_hash = hashlib.sha256(content.encode("utf-8")).hexdigest()
-        formatted_template = formatted_template.replace("{hash}", file_hash)
-
-    return formatted_template
 
 
 @dataclass

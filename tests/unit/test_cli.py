@@ -89,3 +89,10 @@ def test_main_install_precommit_exception(tmp_path: Path):
         result = cli.main(["--install-precommit", "--root", str(tmp_path)])
         assert result == 1
         mock_print.assert_called_with("[red]Failed to install pre-commit hook: Test error[/red]")
+
+def test_check_mode_fail(tmp_path: Path):
+    """Test that main exits with 1 when in check mode and there are changes."""
+    plan_item = PlanItem(action="add", path=tmp_path / "a.py", rel_posix="a.py", prefix="#", check_encoding=False, template="{prefix} {path}", analysis_mode="line")
+    with patch("autoheader.app.ensure_root_or_confirm", return_value=True), patch("autoheader.cli.plan_files", return_value=([plan_item], {})), patch("autoheader.ui.console.print"):
+        result = cli.main(["--check", "--root", str(tmp_path)])
+        assert result == 1

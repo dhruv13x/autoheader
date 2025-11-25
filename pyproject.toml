@@ -103,9 +103,6 @@ pythonpath = ["src"]
 # All tests live under tests/
 testpaths = ["tests"]
 
-# Async projects are common in your stack
-asyncio_mode = "auto"
-
 # Global pytest options
 addopts = [
   "-v",
@@ -117,8 +114,8 @@ addopts = [
   "--import-mode=importlib",
 
   # Time & perf
-  "--timeout=10",
   "--durations=10",
+  "--timeout=10",
 
   # Coverage: target the real package
   "--cov=src/autoheader",
@@ -130,6 +127,7 @@ addopts = [
 
 log_cli = true
 log_cli_level = "INFO"
+asyncio_mode = "auto"
 
 [tool.coverage.run]
 branch = true
