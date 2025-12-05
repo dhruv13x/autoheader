@@ -38,7 +38,7 @@ This document outlines the visionary, integration-oriented plan for `autoheader`
 **Focus**: Webhooks, API exposure, 3rd party plugins, SDK generation, and extensibility.
 
 - [x] LSP (Language Server) Integration
-- [ ] **Official SDK Mode**: First-class Python API for other tools to import `autoheader` logic.
+- [x] **Official SDK Mode**: First-class Python API for other tools to import `autoheader` logic.
 - [ ] **GitHub Action**: Official action for automated header checks and PR comments.
 - [ ] **VSCode Extension**: Wrapper around the LSP for real-time header management and "Quick Fix" actions.
 - [ ] **Pre-commit.ci support**: Zero-config integration.
