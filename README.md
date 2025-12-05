@@ -97,6 +97,7 @@ def main(): pass
 *   **🚀 Performance**: Supports passing specific files, parallel execution, and caching for blazing fast speed in CI pipelines.
 *   **📂 Team Configuration**: Centralize settings using `autoheader.toml` or a remote config URL (`--config-url`) to keep your team aligned.
 *   **💻 Official SDK**: Import `autoheader` in your own Python scripts (`from autoheader import AutoHeader`) for custom integrations.
+*   **🤖 GitHub Action**: Use the official action `uses: dhruv13x/autoheader@v1` to check headers in your CI/CD pipelines.
 *   **🤖 Auto-Installer**: Setup hooks instantly with `autoheader --install-precommit` or `autoheader --install-git-hook`.
 *   **📜 Native SPDX Support**: Easily use standard licenses (e.g., MIT, Apache-2.0) by setting `license_spdx` in your config.
 *   **Smart Filtering**: `.gitignore` aware, inline ignores (`autoheader: ignore`), and robust depth/exclusion controls.
