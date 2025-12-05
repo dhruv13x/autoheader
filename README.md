@@ -27,394 +27,193 @@
 <!-- License -->
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-<!-- Docs -->
-[![Docs](https://img.shields.io/badge/docs-latest-brightgreen.svg)](https://your-docs-link)
-
 </div>
-
 
 # autoheader
 
-**autoheader** is an enterprise-grade CLI tool for **source code projects** that automatically adds or refreshes file headers containing each file's *repo-relative path*.  
-This helps developers quickly identify file origins, improves navigation in large codebases, and standardizes file structure across teams.
+### The enterprise-grade standard for adding, refreshing, and managing repo-relative file headers.
 
-Example of what `autoheader` produces:
+**autoheader** automatically manages file headers containing *repo-relative paths* for source code projects. Whether you are working in a massive monorepo or a small microservice, it ensures every file is traceable, standardizing your codebase and improving developer navigation.
 
-```python
-# src/utils/parser.py
+> "Where is this file located?" — **Never ask this again.**
 
-from __future__ import annotations
-...
-```
+---
 
-```javascript
-// src/api/client.js
+## 🚀 Quick Start
 
-import { fetch } from 'node-fetch';
-...
-```
+### Prerequisites
+- **Python 3.8+**
+- Basic understanding of your project structure (e.g., where `pyproject.toml` or `.git` lives).
 
-Perfect for monorepos, multi-module architectures, enterprise codebases, and any project where file traceability matters.
-
-## ✅ Features
-
-* 🌐 **Polyglot Support:** Manages headers for Python, JavaScript, Go, CSS, and any other language via a simple TOML configuration.
-* ⚡ **Rich UX:** Beautiful, modern output with emojis, progress bars, and a formatted help screen (powered by Rich).
-* 👁️ **Visual Diffs:** See exactly what will change with side-by-side diffs during dry-runs.
-* 🧠 **Smart Copyright:** Automatically updates year ranges (e.g., 2020-2025) in existing headers instead of overwriting them.
-* 🚀 **Performance:** Supports passing specific files for blazing fast execution in pre-commit hooks.
-* ⚙️ **Smart Setup:** Get started in seconds with `autoheader --init` to generate a default configuration file.
-* 📂 **Team Configuration:** Centralize settings for your whole team using `autoheader.toml` or a remote config URL.
-* 🛡️ **Pre-commit Integration:** Automatically enforce headers on every commit with `autoheader --check`.
-* 🤖 **Auto-Installer:** Get started in seconds with `autoheader --install-precommit` or `autoheader --install-git-hook`.
-* 📜 **Native SPDX Support:** Easily use standard licenses (e.g., MIT, Apache-2.0) by setting `license_spdx` in your config.
-* 🧩 **LSP Support:** Includes a Language Server (`autoheader --lsp`) for real-time diagnostics in your IDE.
-* **Smart Filtering:**
-  * **.gitignore Aware:** Automatically respects all patterns in your project's `.gitignore` file.
-  * **Inline Ignores:** Skip any file by adding `autoheader: ignore` anywhere in its content.
-  * **Robust Excludes:** Includes a depth guard (`--depth`) and a robust exclusion system (`--exclude`).
-* **Idempotent & Safe:** Runs repeatedly with no duplicates. Dry-run by default.
-* **Flexible Modes:** Supports `--override` (for refactoring), `--remove` (for cleanup), and `--backup` (for safety).
-* **CI-Friendly:** Full support for `--yes` and `--quiet` flags for non-interactive environments.
-* **Automatic Root Detection:** Uses project markers (`pyproject.toml`, `README.md`, `.gitignore`) to confirm safe execution.
-
-## 📦 Installation
-
-Install from PyPI:
+### Installation
+Install instantly via pip:
 
 ```bash
 pip install "autoheader[precommit]"
 ```
+> **Note:** The `[precommit]` extra is recommended for full feature support (like hook installation).
 
-* The `[precommit]` extra installs `pyyaml`, which is required for the `autoheader --install-precommit` command.
-* `rich-argparse` is now a direct dependency and will be installed automatically.
-
-Or install the latest version directly from source:
-
-```bash
-pip install git+https://github.com/dhruv13x/autoheader
-```
-
-## 🚀 Quick Start
-
-### Step 1: Generate a Configuration
-The easiest way to get started is to generate a default `autoheader.toml` configuration file. This file is pre-configured for Python projects and contains all available settings.
+### Usage Example
+Scan your project and verify what needs to change (Dry Run):
 
 ```bash
+# 1. Initialize a default config
 autoheader --init
-```
-> ✅ Created default config at /path/to/project/autoheader.toml.
 
-### Step 2: Run a Dry-Run
-Run `autoheader` to see a preview of the changes. The tool will scan your project and show a visual diff of any headers that need to be added, updated, or removed.
-
-```bash
+# 2. Preview changes (Safe by default)
 autoheader
 ```
 
-### Step 3. Apply Changes
-
-To apply changes to your files for real, use `--no-dry-run`:
+Apply the changes:
 
 ```bash
 autoheader --no-dry-run
 ```
 
-## 🛡️ Pre-commit & CI Mode
+**What it does:**
+It transforms this:
+```python
+import os
+def main(): pass
+```
+Into this:
+```python
+# src/utils/main.py
 
-`autoheader` is built for modern CI/CD and pre-commit workflows.
-
-### 1. `autoheader --check`
-
-The `--check` flag runs `autoheader` in a dry-run mode. If any files need headers added, removed, or overridden, it will print the files and exit with code 1, **failing your CI or pre-commit hook**.
-
-This is the engine that enforces header consistency.
-
-### 2. `autoheader --install-precommit` (Recommended)
-
-This integrates with the standard [pre-commit](https://pre-commit.com/) framework. It automatically finds your `.pre-commit-config.yaml` (or creates one) and adds `autoheader` as a local hook.
-
-**Requires pyyaml:** You must run `pip install "autoheader[precommit]"` first.
-
-```bash
-# 1. Install with pre-commit support
-pip install "autoheader[precommit]"
-
-# 2. Add autoheader to your .pre-commit-config.yaml
-autoheader --install-precommit
-
-# 3. Activate the hook
-pre-commit install
+import os
+def main(): pass
 ```
 
-Now, `autoheader --check` will run automatically on every commit.
+---
 
-### 3. `autoheader --install-git-hook` (Lightweight)
+## ✨ Key Features
 
-For users who don't want to use the full `pre-commit` framework, you can install a standalone git hook. This creates a simple shell script in `.git/hooks/pre-commit` that runs `autoheader --check`.
+*   **🌐 Polyglot Support**: **God Level**. Manages headers for Python, JavaScript, Go, CSS, and *any* other language via a simple TOML configuration.
+*   **🛡️ Pre-commit Integration**: **God Level**. Automatically enforce headers on every commit with `autoheader --check` or the built-in hook installer.
+*   **⚙️ Smart Setup**: **God Level**. Get started in seconds with `autoheader --init` to generate a battle-tested default configuration.
+*   **🧩 LSP Support**: **God Level**. Includes a Language Server (`autoheader --lsp`) for real-time diagnostics directly in your IDE.
+*   **⚡ Rich UX**: Beautiful, modern output with emojis, progress bars, and visual diffs (powered by Rich).
+*   **🧠 Smart Copyright**: Automatically updates year ranges (e.g., 2020-2025) in existing headers instead of overwriting them.
+*   **🚀 Performance**: Supports passing specific files, parallel execution, and caching for blazing fast speed in CI pipelines.
+*   **📂 Team Configuration**: Centralize settings using `autoheader.toml` or a remote config URL (`--config-url`) to keep your team aligned.
+*   **🤖 Auto-Installer**: Setup hooks instantly with `autoheader --install-precommit` or `autoheader --install-git-hook`.
+*   **📜 Native SPDX Support**: Easily use standard licenses (e.g., MIT, Apache-2.0) by setting `license_spdx` in your config.
+*   **Smart Filtering**: `.gitignore` aware, inline ignores (`autoheader: ignore`), and robust depth/exclusion controls.
+*   **Safety First**: Dry-run by default, backups supported (`--backup`), and idempotent (runs repeatedly without duplicates).
 
-```bash
-autoheader --install-git-hook
-```
+---
 
-**Note:** This requires `autoheader` to be available in your environment (e.g., active virtualenv) when you commit.
+## ⚙️ Configuration & Advanced Usage
 
-### 4. Manual Pre-commit Config
-
-You can also add `autoheader` as a remote hook. For a multi-language project, we recommend specifying `types_or` to run on all configured file types.
-
-Add this to your `.pre-commit-config.yaml`:
-
-```yaml
-- repo: https://github.com/dhruv13x/autoheader
-  rev: v9.0.7  # <-- Use the latest version
-  hooks:
-    - id: autoheader
-      name: autoheader file header checker
-      # Run on any file type you have configured in autoheader.toml
-      types_or: [python, javascript]
-```
-
-## 📂 Enterprise Configuration (`autoheader.toml`)
-
-For teams, you can stop passing CLI flags and standardize settings in an `autoheader.toml` file at your project's root.
-
-**Precedence:** CLI arguments > `autoheader.toml` settings > Application defaults.
-
-Run `autoheader --init` to generate a file pre-filled with the defaults, which looks like this:
+### 1. The `autoheader.toml` File
+The primary way to configure `autoheader` is via the `autoheader.toml` file. Generate one with `autoheader --init`.
 
 ```toml
-# autoheader configuration file
-# Generated by `autoheader --init`
-# For more info, see: https://github.com/dhruv13x/autoheader
-
 [general]
-# Create .bak files before modifying. (Default: false)
+workers = 8
 backup = false
 
-# Number of parallel workers. (Default: 8)
-workers = 8
-
-# auto-confirm all prompts (e.g., for CI). (Default: false)
-# yes = false
-
-[detection]
-# Max directory depth to scan. (Default: no limit)
-# depth = 10
-
-# Files that mark the project root.
-markers = [
-    ".gitignore",
-    "README.md",
-    "README.rst",
-    "pyproject.toml",
-]
-
-[exclude]
-# Extra paths/globs to exclude.
-# The built-in defaults are included below for convenience.
-# Note: .gitignore patterns are also automatically included.
-paths = [
-    ".git",
-    ".github",
-    ".hg",
-    ".mypy_cache",
-    ".pytest_cache",
-    ".ruff_cache",
-    ".svn",
-    ".venv",
-    "__pycache__",
-    "build",
-    "dist",
-    "env",
-    "node_modules",
-    "venv",
-]
-
-# This legacy section is used for the global `blank_lines_after` setting.
-[header]
-blank_lines_after = 1
-
-# --- Language-Specific Configuration ---
-# autoheader v2.0+ uses language blocks.
-# The default config for Python is shown below.
-# You can add more, e.g., [language.javascript], [language.go], etc.
-
 [language.python]
-# Globs to identify files for this language
-file_globs = [
-    "*.py",
-    "*.pyi",
-]
-
-# The comment prefix to use
+file_globs = ["*.py"]
 prefix = "# "
-
-# The template for the header line. {path} is the placeholder.
-# You can also use {license} if license_spdx is set.
 template = "# {path}\n#\n{license}"
-
-# Whether to check for shebangs/encoding (Python-specific)
-check_encoding = true
-
-# Optional: Use a standard SPDX license
 license_spdx = "MIT"
 ```
 
-### Example: Adding JavaScript Support
-
-To add support for JavaScript, simply add another language block:
-
-```toml
-[language.javascript]
-file_globs = ["*.js", "*.jsx", "*.ts"]
-prefix = "// "
-template = "// {path}"
-check_encoding = false  # No shebangs to worry about
-```
-
-## 📘 Advanced Usage & CLI Arguments
-`autoheader` offers a rich set of CLI arguments to customize its behavior. Arguments are grouped by function for clarity.
+### 2. CLI Arguments & API
+All configuration can be overridden via CLI arguments.
 
 | Argument | Description | Default |
-|---|---|---|
+| :--- | :--- | :--- |
 | **Main Actions** | | |
-| `files` | Specific files to process. If not provided, scans the root directory. | (scan all) |
-| `-d`, `--dry-run` | Do not write changes (default). | `True` |
+| `files` | Specific files to process (space separated). Scans root if empty. | (all) |
+| `-d`, `--dry-run` | Do not write changes. | `True` |
 | `-nd`, `--no-dry-run` | Apply changes to files. | `False` |
-| `--override` | Rewrite existing header lines to fresh, correct ones. | `False` |
+| `--override` | Force rewrite of existing headers. | `False` |
 | `--remove` | Remove all autoheader lines from files. | `False` |
-| **CI / Pre-commit / Init** | | |
-| `--check` | Exit with code 1 if any file needs header changes (for pre-commit/CI). | `False` |
-| `--check-hash` | Verify file integrity by checking content hash in headers. | `False` |
-| `--init` | Create a default `autoheader.toml` in the current directory. | `False` |
-| `--install-precommit` | Install autoheader as a 'repo: local' pre-commit hook. | `False` |
-| `--install-git-hook` | Install a raw .git/hooks/pre-commit script. | `False` |
-| `--lsp` | Start the Language Server Protocol (LSP) server. | `False` |
-| **General Behavior** | | |
-| `-y`, `--yes` | Assume yes to all confirmation prompts. | `False` |
-| `--backup` | Create .bak backups before writing. | `False` |
-| `--root` | Root directory. | Current dir |
-| `--workers` | Number of parallel workers to use. | `8` |
-| `--timeout` | Timeout in seconds for processing a single file. | `60.0` |
-| `--config-url` | URL to fetch remote configuration from. | `None` |
-| `--clear-cache` | Clear the cache before running. | `False` |
-| **Filtering & Discovery** | | |
-| `--depth` | Max directory depth from root (e.g., 3). | `None` |
-| `--exclude` | Extra glob(s) to exclude (can repeat). | `[]` |
-| `--markers` | Project root markers (overrides TOML and defaults). | `['.gitignore', 'README.md', 'README.rst', 'pyproject.toml']` |
-| **Header Customization (from TOML)** | | |
-| `--blank-lines-after` | Number of blank lines to add after the header. | `1` |
-| **Output Styling** | | |
-| `-v`, `--verbose` | Increase verbosity. (use -vv for more). | `0` |
-| `-q`, `--quiet` | Suppress informational output; only show errors. | `False` |
-| `--no-color` | Disable colored output. | `False` |
-| `--no-emoji` | Disable emoji prefixes. | `False` |
-| `--format` | Output format. (`default` or `sarif`) | `default` |
+| **CI / Pre-commit** | | |
+| `--check` | Exit code 1 if changes are needed (for CI). | `False` |
+| `--check-hash` | Verify integrity via content hash. | `False` |
+| `--install-precommit` | Install as a `repo: local` pre-commit hook. | `False` |
+| `--install-git-hook` | Install raw `.git/hooks/pre-commit` script. | `False` |
+| `--init` | Create default `autoheader.toml`. | `False` |
+| `--lsp` | Start LSP server. | `False` |
+| **Configuration** | | |
+| `-y`, `--yes` | Auto-confirm all prompts. | `False` |
+| `--backup` | Create `.bak` files before writing. | `False` |
+| `--root` | Specify project root directory. | `cwd` |
+| `--workers` | Number of parallel workers. | `8` |
+| `--timeout` | File processing timeout (seconds). | `60.0` |
+| `--config-url` | Fetch config from a remote URL. | `None` |
+| `--clear-cache` | Clear internal cache. | `False` |
+| **Filtering** | | |
+| `--depth` | Max directory scan depth. | `None` |
+| `--exclude` | Extra globs to exclude (repeatable). | `[]` |
+| `--markers` | Project root markers. | `['.gitignore', ...]` |
+| **Header Customization** | | |
+| `--blank-lines-after` | Blank lines after header. | `1` |
+| **Output** | | |
+| `-v`, `--verbose` | Increase verbosity. | `0` |
+| `-q`, `--quiet` | Suppress info output. | `False` |
+| `--no-color` | Disable colors. | `False` |
+| `--no-emoji` | Disable emojis. | `False` |
+| `--format` | Output format (`default`, `sarif`). | `default` |
 
-### Ignore Specific Files
-To exclude a single file without adding it to `autoheader.toml` or `.gitignore`, add a magic comment anywhere in the file's content:
+### 3. Environment Variables
+While `autoheader` primarily uses `autoheader.toml`, standard environment variables like `NO_COLOR=1` are respected.
+
+### 4. Inline Ignores
+To skip a specific file without complex config, simply add this comment anywhere in the file:
 ```python
 # autoheader: ignore
 ```
-`autoheader` will see this and skip the file.
 
-## 📂 Example Output
+---
 
-`autoheader` provides clear, aligned, and color-coded output.
+## 🏗️ Architecture
+
+`autoheader` is designed for modularity and speed.
 
 ```text
-Project root confirmed (3 markers found).
-Planning changes for /path/to/my-project...
-[progress bar]
-Plan complete. Found 42 files.
-Applying changes to 5 files using 8 workers...
-✅ ADD              src/autoheader/app.py
-⚠️ OVERRIDE         src/autoheader/cli.py
-│  Header diff for src/autoheader/cli.py
-│  - # old_header
-│  + # src/autoheader/cli.py
-❌ REMOVE           src/autoheader/old_util.py
-🔵 SKIP             src/autoheader/models.py
-⚫ SKIP_EXCLUDED    .venv/lib/python3.11/site-packages/rich/console.py
-🔥 ERROR            Failed to process src/autoheader/locked_file.py: [Errno 13] Permission denied
-
-Summary: added=1, overridden=1, removed=1, skipped_ok=34, skipped_excluded=5.
-NOTE: this was a dry run. Use --no-dry-run to apply changes.
-
-✨ Done in 0.42s.
+src/autoheader/
+├── cli.py         # Entry Point: Parses args, handles modes (check, lsp, init)
+├── core.py        # Brain: Plans changes, diffs files, orchestrates execution
+├── config.py      # Config: Loads TOML (local/remote), merges defaults
+├── walker.py      # Eyes: Scans filesystem, respects .gitignore, finds root
+├── headerlogic.py # Logic: Parses headers, detects SPDX, handles comments
+├── ui.py          # Face: Renders Rich output, diffs, and progress bars
+└── lsp.py         # Server: Implements Language Server Protocol
 ```
 
-## 🛡 Safety & Guarantees
+**Core Flow:**
+1.  **Initialize**: `cli.py` starts, determines project root via `walker.py`.
+2.  **Configuration**: `config.py` loads `autoheader.toml` and merges CLI args.
+3.  **Discovery**: `walker.py` scans files, filtering by excluded globs and `.gitignore`.
+4.  **Planning**: `core.py` analyzes each file to create a `PlanItem` (Add, Override, Skip).
+5.  **Execution**: A `ThreadPoolExecutor` runs in parallel to apply changes (write files) safely.
 
-`autoheader` is built with enterprise safety in mind:
-
-* Dry-run by default.
-* Never touches files without your explicit `--no-dry-run`.
-* **.gitignore Aware:** Automatically respects your project's `.gitignore` rules.
-* **Root Detection:** Confirms it's running in a project root before starting.
-* **Interactive Prompts:** Prompts for confirmation before making changes (unless `--yes` is used).
-* **Safe by Default:** Warns you if you run without `--backup`.
-* **Resource Safe:** Includes a file size limit to avoid parsing huge files.
-* **Safe Traversal:** Skips symlinks to prevent unexpected behavior.
-* **Preserves Permissions:** Keeps original file permissions on write.
-
-## 🔧 Development
-
-Install in editable mode with all dev and pre-commit dependencies:
-
-```bash
-git clone https://github.com/dhruv13x/autoheader
-cd autoheader
-pip install -e ".[dev,precommit]"
-```
-
-Run tests:
-
-```bash
-pytest
-```
-
-Run linter & formatter:
-
-```bash
-ruff check .
-black .
-```
+---
 
 ## 🗺️ Roadmap
-`autoheader` is actively developed. Here's a look at what's planned for the future:
 
-* **Standardization & Ecosystem (v5.0+):**
-    * **Native SPDX License Support:** Integrate the SPDX license database to automatically generate legally compliant header blocks.
-    * **Native Git Hook Installer:** Remove the dependency on the `pre-commit` framework for simpler use cases.
-    * **LSP (Language Server) Integration:** Highlight missing headers directly in your IDE as you type.
+We are actively building the future of code standardization.
 
-For more details, see the full [Public Roadmap](ROADMAP.md).
+*   ✅ **v9.0**: Native LSP Support, Pre-commit auto-installer, Rich CLI.
+*   🔜 **v10.0**:
+    *   **Native Git Hook Installer**: Zero-dependency hook installation.
+    *   **Enhanced SPDX**: Automatic license text generation from SPDX IDs.
+    *   **IDE Extensions**: Official VS Code / JetBrains plugins (wrapping the LSP).
 
-## 🤝 Contributing
+Check `ROADMAP.md` for the full list.
 
-Pull requests are welcome.
-If proposing large changes, open an issue first to discuss design and approach.
+---
 
-## 🐛 Reporting Issues
+## 🤝 Contributing & License
 
-Please open issues here:  
-https://github.com/dhruv13x/autoheader/issues
+**Contributions are welcome!**
+1.  Fork the repository.
+2.  Clone: `git clone ...`
+3.  Install dev deps: `pip install -e ".[dev,precommit]"`
+4.  Run tests: `pytest`
 
-Include:
-* What command you ran
-* Error output
-* Your Python version
-* OS / environment information
-
-## 📜 License
-
-MIT © dhruv13x
-
-## ⭐ Support the Project
-
-If this tool helped you, consider giving the repo a star:  
-https://github.com/dhruv13x/autoheader
-
-Stars help visibility and future development!
+**License**: MIT © dhruv13x

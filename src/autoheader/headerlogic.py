@@ -62,7 +62,31 @@ def header_line_for(
 
              # Simple approach: Format license text with year.
              owner_str = license_owner if license_owner else "<Owner>"
-             license_text = text.format(year=year_to_insert, owner=owner_str)
+             # --- FIX: Ensure owner_str is correctly passed ---
+             # Some license texts might use {owner} placeholder, others might not.
+             # We should try to format with both year and owner.
+             try:
+                # Replace explicitly known keys first to avoid formatting errors with curly braces in license text
+                # (some licenses might contain { or } which break .format())
+                # Note: We replace <year> and <owner> too as some templates use that convention.
+                # And we replace [year] and [fullname] etc.
+
+                # Standard autoheader placeholders from licenses.py
+                license_text = text.replace("{year}", year_to_insert).replace("{owner}", owner_str)
+
+                # Common SPDX placeholders
+                license_text = license_text.replace("<year>", year_to_insert).replace("<owner>", owner_str)
+                license_text = license_text.replace("[year]", year_to_insert).replace("[fullname]", owner_str)
+
+                # Also try .format for simple cases where {} are used
+                # But catch errors if the license has other braces
+                try:
+                    license_text = license_text.format(year=year_to_insert, owner=owner_str)
+                except (IndexError, KeyError, ValueError):
+                    pass
+             except Exception:
+                 # Fallback
+                license_text = text
 
     return template.format(
         path=rel_posix,
