@@ -96,6 +96,7 @@ def main(): pass
 *   **🧠 Smart Copyright**: Automatically updates year ranges (e.g., 2020-2025) in existing headers instead of overwriting them.
 *   **🚀 Performance**: Supports passing specific files, parallel execution, and caching for blazing fast speed in CI pipelines.
 *   **📂 Team Configuration**: Centralize settings using `autoheader.toml` or a remote config URL (`--config-url`) to keep your team aligned.
+*   **💻 Official SDK**: Import `autoheader` in your own Python scripts (`from autoheader import AutoHeader`) for custom integrations.
 *   **🤖 Auto-Installer**: Setup hooks instantly with `autoheader --install-precommit` or `autoheader --install-git-hook`.
 *   **📜 Native SPDX Support**: Easily use standard licenses (e.g., MIT, Apache-2.0) by setting `license_spdx` in your config.
 *   **Smart Filtering**: `.gitignore` aware, inline ignores (`autoheader: ignore`), and robust depth/exclusion controls.
