@@ -8,6 +8,7 @@ from typing import List
 import logging
 import importlib.metadata
 import time
+from rich.progress import track, Progress
 
 # --- ADD THIS ---
 try:
@@ -30,10 +31,10 @@ from .constants import (
     ROOT_MARKERS,
     CONFIG_FILE_NAME,  # <-- ADD THIS
 )
-from .core import (
-    plan_files,
-    write_with_header,
-)
+# Update imports to use planner and new core
+from .planner import plan_files
+from .core import write_with_header
+
 # --- ADD THIS IMPORT ---
 from . import filesystem
 from .models import PlanItem, RuntimeContext
@@ -391,12 +392,34 @@ def main(argv: List[str] | None = None) -> int:
             check_hash=args.check_hash,
             timeout=args.timeout,
         )
-        plan, new_cache = plan_files(
+        # Use planner module
+        plan_generator, total_files = plan_files(
             context,
             files=[file.resolve() for file in args.files],
             languages=languages,
             workers=args.workers,
         )
+
+    # Execute plan generation with progress bar
+    plan = []
+    new_cache = {}
+
+    # We use track directly on the generator, handling the UI here
+    results = track(
+        plan_generator,
+        description="Planning files...",
+        console=ui.console,
+        disable=ui.console.quiet,
+        transient=True,
+        total=total_files,
+    )
+
+    for plan_item, cache_info in results:
+        plan.append(plan_item)
+        if cache_info:
+            rel_posix, cache_entry = cache_info
+            new_cache[rel_posix] = cache_entry
+
     log.info(f"Plan complete. Found {len(plan)} files.")
 
     # 2. PRE-CALCULATE & FILTER
@@ -462,7 +485,7 @@ def main(argv: List[str] | None = None) -> int:
             rel = item.rel_posix
             try:
                 # --- MODIFIED: Use Rich Output and configurable timeout ---
-                action_done, new_mtime, new_hash = future.result(timeout=args.timeout)
+                action_done, new_mtime, new_hash, diff_info = future.result(timeout=args.timeout)
                 new_cache[rel] = {"mtime": new_mtime, "hash": new_hash}
 
                 if action_done == "override":
@@ -472,6 +495,10 @@ def main(argv: List[str] | None = None) -> int:
                 elif action_done == "remove":
                     removed += 1
                 
+                # Show diff if available (moved from write_with_header to here)
+                if diff_info:
+                     ui.show_header_diff(*diff_info)
+
                 prefix = "DRY " if args.dry_run else ""
                 action_name = f"{prefix}{action_done.upper()}"
                 ui.console.print(ui.format_action(action_name, rel, args.no_emoji, args.dry_run))
