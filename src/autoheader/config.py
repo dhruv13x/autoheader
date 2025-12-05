@@ -17,6 +17,7 @@ except ImportError:
 # --- MODIFIED ---
 from .constants import CONFIG_FILE_NAME, HEADER_PREFIX, DEFAULT_EXCLUDES, ROOT_MARKERS
 from .models import LanguageConfig
+from .licenses import get_license_text
 
 log = logging.getLogger(__name__)
 
@@ -152,6 +153,11 @@ def load_language_configs(
                 template = lang_data.get("template", default_template)
                 # --- END FIX ---
 
+                # Check for license_spdx
+                license_spdx = lang_data.get("license_spdx")
+                if license_spdx and not get_license_text(license_spdx):
+                    raise ValueError(f"Unsupported or unknown SPDX license: {license_spdx}")
+
                 lang = LanguageConfig(
                     name=lang_name,
                     file_globs=lang_data["file_globs"],
@@ -159,6 +165,8 @@ def load_language_configs(
                     check_encoding=lang_data.get("check_encoding", False),
                     template=template,
                     analysis_mode=lang_data.get("analysis_mode", "line"),
+                    license_spdx=license_spdx,
+                    license_owner=lang_data.get("license_owner"),
                 )
                 languages.append(lang)
             except KeyError as e:

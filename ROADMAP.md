@@ -29,7 +29,7 @@ This document outlines the visionary, integration-oriented plan for `autoheader`
 - [x] SARIF reporting (`--format sarif`)
 - [x] Remote configuration (`--config-url`)
 - [x] File tamper detection (`{hash}`)
-- [ ] Native SPDX License Support
+- [x] Native SPDX License Support
 
 ---
 

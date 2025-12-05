@@ -19,9 +19,12 @@ def header_line_for(
     template: str,
     content: str | None = None,
     existing_header: str | None = None,
+    license_spdx: str | None = None,
+    license_owner: str | None = None,
 ) -> str:
     """Creates the header line from a template, with smart year updating."""
     import re
+    from . import licenses
 
     current_year = datetime.datetime.now().year
     year_to_insert = str(current_year)
@@ -38,10 +41,34 @@ def header_line_for(
         file_hash = hashlib.sha256(content.encode("utf-8")).hexdigest()
         template = template.replace("{hash}", file_hash)
 
+    # Handle license replacement
+    license_text = ""
+    if license_spdx:
+        text = licenses.get_license_text(license_spdx)
+        if text:
+             # Basic substitution of year in the license text itself
+             # SPDX licenses often use {year} or similar which might conflict with f-string.
+             # Our licenses in licenses.py use {year} and {owner}.
+             # We should format the license text first.
+             # TODO: where to get owner? maybe from config? For now use a placeholder or empty.
+             # Actually, if the user config has `license = {text = "MIT © dhruv13x"}` in pyproject.toml
+             # we might want to use that.
+             # For now, let's just expose the raw license text or format it with available data.
+
+             # If the license text has {year}, we format it.
+             # If it has {owner}, we need that info.
+             # Let's assume for now we just pass the text and let the outer format handle it if it was embedded?
+             # No, if {license} is in the template, we need to return the formatted license text.
+
+             # Simple approach: Format license text with year.
+             owner_str = license_owner if license_owner else "<Owner>"
+             license_text = text.format(year=year_to_insert, owner=owner_str)
+
     return template.format(
         path=rel_posix,
         filename=Path(rel_posix).name,
         year=year_to_insert,
+        license=license_text
     )
 
 

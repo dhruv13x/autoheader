@@ -67,6 +67,7 @@ Perfect for monorepos, multi-module architectures, enterprise codebases, and any
 * 📂 **Team Configuration:** Centralize settings for your whole team using `autoheader.toml` or a remote config URL.
 * 🛡️ **Pre-commit Integration:** Automatically enforce headers on every commit with `autoheader --check`.
 * 🤖 **Auto-Installer:** Get started in seconds with `autoheader --install-precommit` or `autoheader --install-git-hook`.
+* 📜 **Native SPDX Support:** Easily use standard licenses (e.g., MIT, Apache-2.0) by setting `license_spdx` in your config.
 * **Smart Filtering:**
   * **.gitignore Aware:** Automatically respects all patterns in your project's `.gitignore` file.
   * **Inline Ignores:** Skip any file by adding `autoheader: ignore` anywhere in its content.
@@ -249,10 +250,14 @@ file_globs = [
 prefix = "# "
 
 # The template for the header line. {path} is the placeholder.
-template = "# {path}"
+# You can also use {license} if license_spdx is set.
+template = "# {path}\n#\n{license}"
 
 # Whether to check for shebangs/encoding (Python-specific)
 check_encoding = true
+
+# Optional: Use a standard SPDX license
+license_spdx = "MIT"
 ```
 
 ### Example: Adding JavaScript Support

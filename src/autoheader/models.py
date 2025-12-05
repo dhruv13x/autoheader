@@ -16,6 +16,8 @@ class LanguageConfig:
     check_encoding: bool  # Is this Python-like (shebang, encoding)?
     template: str  # The template for the header line
     analysis_mode: str = "line"
+    license_spdx: str | None = None
+    license_owner: str | None = None
 
 
 @dataclass
@@ -30,6 +32,8 @@ class PlanItem:
     check_encoding: bool
     template: str
     analysis_mode: str
+    license_spdx: str | None = None
+    license_owner: str | None = None
     # --- END ADD ---
 
     reason: str = ""
