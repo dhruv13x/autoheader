@@ -36,7 +36,7 @@ This document outlines the visionary, integration-oriented plan for `autoheader`
 ## Phase 3: The Ecosystem (Q3)
 **Focus**: Webhooks, API exposure, 3rd party plugins, SDK generation, and extensibility.
 
-- [ ] LSP (Language Server) Integration
+- [x] LSP (Language Server) Integration
 - [ ] GitHub Action for automated header checks
 - [ ] VSCode Extension for real-time header management
 - [ ] Pre-commit.ci support (automated config)
