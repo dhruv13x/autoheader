@@ -17,7 +17,7 @@ This document outlines the visionary, integration-oriented plan for `autoheader`
 - [x] Parallel file processing
 - [x] Smart copyright year updating
 - [x] Inline ignores (`autoheader: ignore`)
-- [ ] Native Git Hook Installer
+- [x] Native Git Hook Installer
 
 ---
 

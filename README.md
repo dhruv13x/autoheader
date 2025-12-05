@@ -66,7 +66,7 @@ Perfect for monorepos, multi-module architectures, enterprise codebases, and any
 * ⚙️ **Smart Setup:** Get started in seconds with `autoheader --init` to generate a default configuration file.
 * 📂 **Team Configuration:** Centralize settings for your whole team using `autoheader.toml` or a remote config URL.
 * 🛡️ **Pre-commit Integration:** Automatically enforce headers on every commit with `autoheader --check`.
-* 🤖 **Auto-Installer:** Get started in seconds with `autoheader --install-precommit`.
+* 🤖 **Auto-Installer:** Get started in seconds with `autoheader --install-precommit` or `autoheader --install-git-hook`.
 * **Smart Filtering:**
   * **.gitignore Aware:** Automatically respects all patterns in your project's `.gitignore` file.
   * **Inline Ignores:** Skip any file by adding `autoheader: ignore` anywhere in its content.
@@ -128,9 +128,9 @@ The `--check` flag runs `autoheader` in a dry-run mode. If any files need header
 
 This is the engine that enforces header consistency.
 
-### 2. `autoheader --install-precommit`
+### 2. `autoheader --install-precommit` (Recommended)
 
-This is the easiest way to get started. It automatically finds your `.pre-commit-config.yaml` (or creates one) and adds `autoheader` as a local hook.
+This integrates with the standard [pre-commit](https://pre-commit.com/) framework. It automatically finds your `.pre-commit-config.yaml` (or creates one) and adds `autoheader` as a local hook.
 
 **Requires pyyaml:** You must run `pip install "autoheader[precommit]"` first.
 
@@ -147,7 +147,17 @@ pre-commit install
 
 Now, `autoheader --check` will run automatically on every commit.
 
-### 3. Manual Pre-commit Config
+### 3. `autoheader --install-git-hook` (Lightweight)
+
+For users who don't want to use the full `pre-commit` framework, you can install a standalone git hook. This creates a simple shell script in `.git/hooks/pre-commit` that runs `autoheader --check`.
+
+```bash
+autoheader --install-git-hook
+```
+
+**Note:** This requires `autoheader` to be available in your environment (e.g., active virtualenv) when you commit.
+
+### 4. Manual Pre-commit Config
 
 You can also add `autoheader` as a remote hook. For a multi-language project, we recommend specifying `types_or` to run on all configured file types.
 
@@ -273,6 +283,7 @@ check_encoding = false  # No shebangs to worry about
 | `--check-hash` | Verify file integrity by checking content hash in headers. | `False` |
 | `--init` | Create a default `autoheader.toml` in the current directory. | `False` |
 | `--install-precommit` | Install autoheader as a 'repo: local' pre-commit hook. | `False` |
+| `--install-git-hook` | Install a raw .git/hooks/pre-commit script. | `False` |
 | **General Behavior** | | |
 | `-y`, `--yes` | Assume yes to all confirmation prompts. | `False` |
 | `--backup` | Create .bak backups before writing. | `False` |
