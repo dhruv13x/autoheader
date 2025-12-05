@@ -2,6 +2,8 @@
 
 from pathlib import Path
 from subprocess import run
+import sys
+import os
 
 def test_cli_explicit_files(populated_project: Path):
     """
@@ -9,13 +11,19 @@ def test_cli_explicit_files(populated_project: Path):
     """
     root = populated_project
 
+    # We need to ensure python finds the src module
+    env = os.environ.copy()
+    src_path = Path.cwd() / "src"
+    env["PYTHONPATH"] = str(src_path)
+
     # We expect dirty_file.py to be processed, but clean_file.py to be ignored
     # because it wasn't passed as an argument.
     result = run(
-        ["autoheader", "--no-dry-run", "--yes", "src/dirty_file.py"],
+        [sys.executable, "-m", "autoheader.cli", "--no-dry-run", "--yes", "src/dirty_file.py"],
         cwd=root,
         capture_output=True,
         text=True,
+        env=env,
     )
 
     assert result.returncode == 0
