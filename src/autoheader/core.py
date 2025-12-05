@@ -101,12 +101,12 @@ def _analyze_single_file(
         return PlanItem(path, rel_posix, "skip-header-exists", prefix=lang.prefix, check_encoding=lang.check_encoding, template=lang.template, analysis_mode=lang.analysis_mode, license_spdx=lang.license_spdx), (rel_posix, cache_entry)
 
     if analysis.existing_header_line is None:
-        return PlanItem(path, rel_posix, "add", prefix=lang.prefix, check_encoding=lang.check_encoding, template=lang.template, analysis_mode=lang.analysis_mode, license_spdx=lang.license_spdx), (rel_posix, cache_entry)
+        return PlanItem(path, rel_posix, "add", prefix=lang.prefix, check_encoding=lang.check_encoding, template=lang.template, analysis_mode=lang.analysis_mode, license_spdx=lang.license_spdx, license_owner=lang.license_owner), (rel_posix, cache_entry)
 
     if context.override:
-        return PlanItem(path, rel_posix, "override", prefix=lang.prefix, check_encoding=lang.check_encoding, template=lang.template, analysis_mode=lang.analysis_mode, license_spdx=lang.license_spdx), (rel_posix, cache_entry)
+        return PlanItem(path, rel_posix, "override", prefix=lang.prefix, check_encoding=lang.check_encoding, template=lang.template, analysis_mode=lang.analysis_mode, license_spdx=lang.license_spdx, license_owner=lang.license_owner), (rel_posix, cache_entry)
     else:
-        return PlanItem(path, rel_posix, "skip-header-exists", reason="incorrect-header-no-override", prefix=lang.prefix, check_encoding=lang.check_encoding, template=lang.template, analysis_mode=lang.analysis_mode, license_spdx=lang.license_spdx), (rel_posix, cache_entry)
+        return PlanItem(path, rel_posix, "skip-header-exists", reason="incorrect-header-no-override", prefix=lang.prefix, check_encoding=lang.check_encoding, template=lang.template, analysis_mode=lang.analysis_mode, license_spdx=lang.license_spdx, license_owner=lang.license_owner), (rel_posix, cache_entry)
 
 
 def _get_language_for_file(path: Path, languages: List[LanguageConfig]) -> LanguageConfig | None:
@@ -191,6 +191,8 @@ def write_with_header(
     expected = headerlogic.header_line_for(
         rel_posix,
         item.template,
+        # --- FIX: Pass content to allow {hash} calculation if needed ---
+        content="\n".join(original_lines),
         existing_header=analysis.existing_header_line,
         license_spdx=item.license_spdx,
         license_owner=item.license_owner,
