@@ -68,6 +68,7 @@ Perfect for monorepos, multi-module architectures, enterprise codebases, and any
 * 🛡️ **Pre-commit Integration:** Automatically enforce headers on every commit with `autoheader --check`.
 * 🤖 **Auto-Installer:** Get started in seconds with `autoheader --install-precommit` or `autoheader --install-git-hook`.
 * 📜 **Native SPDX Support:** Easily use standard licenses (e.g., MIT, Apache-2.0) by setting `license_spdx` in your config.
+* 🧩 **LSP Support:** Includes a Language Server (`autoheader --lsp`) for real-time diagnostics in your IDE.
 * **Smart Filtering:**
   * **.gitignore Aware:** Automatically respects all patterns in your project's `.gitignore` file.
   * **Inline Ignores:** Skip any file by adding `autoheader: ignore` anywhere in its content.
@@ -289,6 +290,7 @@ check_encoding = false  # No shebangs to worry about
 | `--init` | Create a default `autoheader.toml` in the current directory. | `False` |
 | `--install-precommit` | Install autoheader as a 'repo: local' pre-commit hook. | `False` |
 | `--install-git-hook` | Install a raw .git/hooks/pre-commit script. | `False` |
+| `--lsp` | Start the Language Server Protocol (LSP) server. | `False` |
 | **General Behavior** | | |
 | `-y`, `--yes` | Assume yes to all confirmation prompts. | `False` |
 | `--backup` | Create .bak backups before writing. | `False` |

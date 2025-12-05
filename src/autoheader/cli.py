@@ -124,6 +124,11 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Create a default 'autoheader.toml' in the current directory.",
     )
+    g_ci_mode.add_argument(
+        "--lsp",
+        action="store_true",
+        help="Start the Language Server Protocol (LSP) server.",
+    )
     # --- END ADD ---
 
     # --- General Behavior ---
@@ -311,6 +316,25 @@ def main(argv: List[str] | None = None) -> int:
             cache_path.unlink()
             ui.console.print("[bold]Cache cleared.[/bold]")
     # --- END ADD ---
+
+    # --- NEW: LSP Server ---
+    if args.lsp:
+        try:
+            from . import lsp
+            server = lsp.create_server()
+            # Start the server (stdio)
+            # We assume stdio if not configured otherwise
+            ui.console.print("[green]Starting autoheader LSP server over stdio...[/green]", file=sys.stderr)
+            server.start_io()
+            return 0
+        except ImportError as e:
+            ui.console.print(f"[red]Error starting LSP server: {e}[/red]")
+            ui.console.print("[yellow]Please install optional dependencies: pip install autoheader[lsp][/yellow]")
+            return 1
+        except Exception as e:
+            ui.console.print(f"[red]LSP Server Error: {e}[/red]")
+            return 1
+    # --- END NEW ---
 
     # Load language configs (MOVED after --init check)
     languages = config.load_language_configs(toml_data, general_config)

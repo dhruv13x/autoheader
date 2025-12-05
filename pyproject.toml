@@ -52,6 +52,9 @@ Issues   = "https://github.com/dhruv13x/autoheader/issues"
 autoheader = "autoheader.cli:main"
 
 [project.optional-dependencies]
+lsp = [
+  "pygls>=2.0.0"
+]
 dev = [
   "pytest>=8.0.0",
   "pytest-cov>=5.0.0",
