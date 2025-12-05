@@ -113,6 +113,11 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Install autoheader as a 'repo: local' pre-commit hook.",
     )
+    g_ci_mode.add_argument(
+        "--install-git-hook",
+        action="store_true",
+        help="Install a raw .git/hooks/pre-commit script (no pre-commit framework needed).",
+    )
     # --- ADD THIS ---
     g_ci_mode.add_argument(
         "--init",
@@ -286,6 +291,16 @@ def main(argv: List[str] | None = None) -> int:
             return 1
         except Exception as e:
             ui.console.print(f"[red]Failed to install pre-commit hook: {e}[/red]")
+            return 1
+
+    # --- NEW: Handle native git hook installation ---
+    if args.install_git_hook:
+        try:
+            from . import hooks
+            hooks.install_native_hook(root)
+            return 0
+        except Exception as e:
+            ui.console.print(f"[red]Failed to install native git hook: {e}[/red]")
             return 1
     # --- END NEW ---
 
