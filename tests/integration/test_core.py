@@ -2,7 +2,8 @@
 
 from pathlib import Path
 
-from autoheader.core import plan_files, write_with_header
+from autoheader.planner import plan_files
+from autoheader.core import write_with_header
 from autoheader.models import PlanItem, RuntimeContext
 # --- ADD THESE IMPORTS ---
 from autoheader.models import LanguageConfig
@@ -40,8 +41,12 @@ def test_plan_files(populated_project: Path):
         check_hash=False,
         timeout=60.0,
     )
-    plan, _ = plan_files(context, files=None, languages=DEFAULT_LANGUAGES, workers=1)
+    generator, _ = plan_files(context, files=None, languages=DEFAULT_LANGUAGES, workers=1)
     # --- END MODIFIED ---
+
+    plan = []
+    for plan_item, _ in generator:
+        plan.append(plan_item)
 
     # Convert to a dict for easy lookup
     plan_map = {item.rel_posix: item.action for item in plan}
@@ -72,9 +77,13 @@ def test_plan_files_with_flags(populated_project: Path):
     context_override = RuntimeContext(
         root=root, excludes=[], depth=None, override=True, remove=False, check_hash=False, timeout=60.0
     )
-    plan_override, _ = plan_files(
+    generator, _ = plan_files(
         context_override, files=None, languages=DEFAULT_LANGUAGES, workers=1
     )
+    plan_override = []
+    for item, _ in generator:
+        plan_override.append(item)
+
     plan_map = {item.rel_posix: item.action for item in plan_override}
     assert plan_map["src/incorrect_file.py"] == "override"
 
@@ -82,9 +91,13 @@ def test_plan_files_with_flags(populated_project: Path):
     context_remove = RuntimeContext(
         root=root, excludes=[], depth=None, override=False, remove=True, check_hash=False, timeout=60.0
     )
-    plan_remove, _ = plan_files(
+    generator, _ = plan_files(
         context_remove, files=None, languages=DEFAULT_LANGUAGES, workers=1
     )
+    plan_remove = []
+    for item, _ in generator:
+        plan_remove.append(item)
+
     plan_map = {item.rel_posix: item.action for item in plan_remove}
     assert plan_map["src/clean_file.py"] == "remove"
     assert plan_map["src/dirty_file.py"] == "skip-header-exists"
@@ -93,9 +106,12 @@ def test_plan_files_with_flags(populated_project: Path):
     context_depth = RuntimeContext(
         root=root, excludes=[], depth=3, override=False, remove=False, check_hash=False, timeout=60.0
     )
-    plan_depth, _ = plan_files(
+    generator, _ = plan_files(
         context_depth, files=None, languages=DEFAULT_LANGUAGES, workers=1
     )
+    plan_depth = []
+    for item, _ in generator:
+        plan_depth.append(item)
     # --- END MODIFIED ---
     plan_map = {item.rel_posix: item.action for item in plan_depth}
     # 'src/a/b/c/d/e/deep_file.py' (depth 5) should be excluded
@@ -108,7 +124,7 @@ def test_analyze_single_file_too_large(fs):
     """
     Tests that _analyze_single_file skips a file that is too large.
     """
-    from autoheader.core import _analyze_single_file
+    from autoheader.planner import _analyze_single_file
     from autoheader.constants import MAX_FILE_SIZE_BYTES
 
     root = Path("/fake_project")
@@ -147,7 +163,7 @@ def test_write_with_header_actions(populated_project: Path):
     # --- END MODIFIED ---
     
     # --- MODIFIED: Remove prefix argument ---
-    action, _, _ = write_with_header(
+    action, _, _, _ = write_with_header(
         item_add, backup=False, dry_run=False, blank_lines_after=1
     )
     # --- END MODIFIED ---
@@ -175,7 +191,7 @@ def test_write_with_header_actions(populated_project: Path):
     # --- END MODIFIED ---
     
     # --- MODIFIED: Remove prefix argument ---
-    action, _, _ = write_with_header(
+    action, _, _, _ = write_with_header(
         item_override, backup=False, dry_run=False, blank_lines_after=1
     )
     # --- END MODIFIED ---
@@ -201,7 +217,7 @@ def test_write_with_header_actions(populated_project: Path):
     # --- END MODIFIED ---
     
     # --- MODIFIED: Remove prefix argument ---
-    action, _, _ = write_with_header(
+    action, _, _, _ = write_with_header(
         item_remove, backup=False, dry_run=False, blank_lines_after=1
     )
     # --- END MODIFIED ---
@@ -217,7 +233,7 @@ def test_analyze_single_file_empty_file(fs):
     """
     Tests that _analyze_single_file skips an empty file.
     """
-    from autoheader.core import _analyze_single_file
+    from autoheader.planner import _analyze_single_file
 
     root = Path("/fake_project")
     fs.create_dir(root)
