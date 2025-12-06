@@ -1,7 +1,7 @@
-
 import datetime
 import hashlib
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
+import pytest
 
 from autoheader.headerlogic import (
     HeaderAnalysis,
@@ -11,32 +11,46 @@ from autoheader.headerlogic import (
     header_line_for,
 )
 
+# --- header_line_for Tests ---
 
-@patch("autoheader.headerlogic.datetime")
-def test_header_line_for_simple_year(mock_dt):
-    mock_dt.datetime.now.return_value = datetime.datetime(2025, 1, 1)
-    template = "# {year}"
-    result = header_line_for("test.py", template)
-    assert result == "# 2025"
+@pytest.mark.parametrize("year, expected_year_str", [
+    (2025, "2025"),
+    (2030, "2030"),
+])
+def test_header_line_for_simple_year(year, expected_year_str):
+    # Mocking datetime.datetime to return a mocked object with 'year' attribute
+    with patch("autoheader.headerlogic.datetime.datetime") as mock_dt:
+        mock_now = MagicMock()
+        mock_now.year = year
+        mock_dt.now.return_value = mock_now
+
+        template = "# {year}"
+        result = header_line_for("test.py", template)
+        assert result == f"# {expected_year_str}"
 
 
-@patch("autoheader.headerlogic.datetime")
-def test_header_line_for_smart_year_update(mock_dt):
-    mock_dt.datetime.now.return_value = datetime.datetime(2025, 1, 1)
-    template = "# {year}"
-    existing_header = "# 2020"
-    result = header_line_for("test.py", template, existing_header=existing_header)
-    assert result == "# 2020-2025"
+def test_header_line_for_smart_year_update():
+    with patch("autoheader.headerlogic.datetime.datetime") as mock_dt:
+        mock_now = MagicMock()
+        mock_now.year = 2025
+        mock_dt.now.return_value = mock_now
+
+        template = "# {year}"
+        existing_header = "# 2020"
+        result = header_line_for("test.py", template, existing_header=existing_header)
+        assert result == "# 2020-2025"
 
 
-@patch("autoheader.headerlogic.datetime")
-def test_header_line_for_smart_year_no_update_needed(mock_dt):
-    mock_dt.datetime.now.return_value = datetime.datetime(2025, 1, 1)
-    template = "# {year}"
-    existing_header = "# 2025"
-    result = header_line_for("test.py", template, existing_header=existing_header)
-    assert result == "# 2025"
+def test_header_line_for_smart_year_no_update_needed():
+    with patch("autoheader.headerlogic.datetime.datetime") as mock_dt:
+        mock_now = MagicMock()
+        mock_now.year = 2025
+        mock_dt.now.return_value = mock_now
 
+        template = "# {year}"
+        existing_header = "# 2025"
+        result = header_line_for("test.py", template, existing_header=existing_header)
+        assert result == "# 2025"
 
 def test_header_line_for_no_year():
     template = "# {path}"
@@ -51,18 +65,18 @@ def test_header_line_for_hash():
     result = header_line_for("test.js", template, content=content)
     assert result == f"# {expected_hash}"
 
+# --- analyze_header_state Tests ---
 
-def test_analyze_header_state_shebang_and_encoding():
-    lines = ["#!/usr/bin/env python", "# -*- coding: utf-8 -*-", "import os"]
+@pytest.mark.parametrize("lines, expected_index", [
+    (["#!/usr/bin/env python", "# -*- coding: utf-8 -*-", "import os"], 2),
+    (["#!/usr/bin/env python", "import os"], 1),
+    (["# -*- coding: utf-8 -*-", "import os"], 1),
+    (["import os"], 0),
+    ([], 0),
+])
+def test_analyze_header_state_shebang_and_encoding(lines, expected_index):
     analysis = analyze_header_state(lines, "", "#", check_encoding=True)
-    assert analysis.insert_index == 2
-
-
-def test_analyze_header_state_encoding_no_shebang():
-    lines = ["# -*- coding: utf-8 -*-", "import os"]
-    analysis = analyze_header_state(lines, "", "#", check_encoding=True)
-    assert analysis.insert_index == 1
-
+    assert analysis.insert_index == expected_index
 
 def test_analyze_header_state_ast_mode_no_docstring():
     lines = ["import os", "print('hello')"]
@@ -115,6 +129,7 @@ def test_analyze_header_state_compatibility_check_no_match():
 
 
 def test_analyze_header_state_tampered_header():
+    # This hash doesn't match the content
     lines = [
         "# hash:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
         "print('hello')",
@@ -132,12 +147,19 @@ def test_analyze_header_state_hash_check_no_hash():
     )
     assert not analysis.has_tampered_header
 
+# --- build_new_lines Tests ---
 
 def test_build_new_lines_no_blank_lines():
     analysis = HeaderAnalysis(0, None, False)
     lines = build_new_lines([], "header", analysis, False, 0)
     assert lines == ["header"]
 
+def test_build_new_lines_with_blank_lines():
+    analysis = HeaderAnalysis(0, None, False)
+    lines = build_new_lines(["code"], "header", analysis, False, 2)
+    assert lines == ["header", "", "", "code"]
+
+# --- build_removed_lines Tests ---
 
 def test_build_removed_lines_multiline_header_with_blank():
     lines = ["# line 1", "# line 2", "", "import os"]
