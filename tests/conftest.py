@@ -2,8 +2,8 @@
 
 import pytest
 from pathlib import Path
-
-# The 'tmp_path' and 'fs' fixtures are provided by pytest and pyfakefs respectively.
+from typing import Generator
+from unittest.mock import patch, Mock
 
 @pytest.fixture
 def project_root(tmp_path: Path) -> Path:
@@ -102,3 +102,15 @@ blank_lines_after = 2
     fs.create_file("/other_project/pyproject.toml") # Mark as root
     
     return fs # Return the configured filesystem object
+
+@pytest.fixture
+def mock_logger() -> Generator[Mock, None, None]:
+    """Fixture to mock the logger to prevent console noise during tests."""
+    with patch("autoheader.logger") as mock:
+        yield mock
+
+@pytest.fixture
+def mock_console() -> Generator[Mock, None, None]:
+    """Fixture to mock the rich console."""
+    with patch("rich.console.Console") as mock:
+        yield mock.return_value
