@@ -40,7 +40,7 @@ This document outlines the visionary, integration-oriented plan for `autoheader`
 - [x] LSP (Language Server) Integration
 - [x] **Official SDK Mode**: First-class Python API for other tools to import `autoheader` logic.
 - [x] **GitHub Action**: Official action for automated header checks and PR comments.
-- [ ] **VSCode Extension**: Wrapper around the LSP for real-time header management and "Quick Fix" actions.
+- [x] **VSCode Extension**: Wrapper around the LSP for real-time header management and "Quick Fix" actions.
 - [ ] **Pre-commit.ci support**: Zero-config integration.
 - [ ] **Linter Plugins**: Integrations for Ruff or ESLint.
 - [ ] **Header Telemetry**: Optional reporting to a central server for enterprise audit logs.
