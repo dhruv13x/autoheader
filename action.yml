@@ -1,0 +1,16 @@
+name: 'AutoHeader'
+description: 'Automated file header management for any language. Add, update, or remove headers / licenses.'
+author: 'Dhruv'
+inputs:
+  args:
+    description: 'Arguments to pass to autoheader CLI'
+    required: false
+    default: '--check'
+runs:
+  using: 'docker'
+  image: 'Dockerfile'
+  args:
+    - ${{ inputs.args }}
+branding:
+  icon: 'file-text'
+  color: 'blue'
