@@ -99,9 +99,9 @@ def main(): pass
 *   **💻 Official SDK**: Import `autoheader` in your own Python scripts (`from autoheader import AutoHeader`) for custom integrations.
 *   **🤖 GitHub Action**: Use the official action `uses: dhruv13x/autoheader@v1` to check headers in your CI/CD pipelines.
 *   **🤖 Auto-Installer**: Setup hooks instantly with `autoheader --install-precommit` or `autoheader --install-git-hook`.
+*   **🔍 SARIF Support**: Output results in SARIF format (`--format sarif`) for integration with GitHub Security and other scanning tools.
 *   **📜 Native SPDX Support**: Easily use standard licenses (e.g., MIT, Apache-2.0) by setting `license_spdx` in your config.
 *   **Smart Filtering**: `.gitignore` aware, inline ignores (`autoheader: ignore`), and robust depth/exclusion controls.
-*   **Safety First**: Dry-run by default, backups supported (`--backup`), and idempotent (runs repeatedly without duplicates).
 
 ---
 
@@ -114,6 +114,7 @@ The primary way to configure `autoheader` is via the `autoheader.toml` file. Gen
 [general]
 workers = 8
 backup = false
+exclude = ["tests/fixtures/*"]
 
 [language.python]
 file_globs = ["*.py"]
@@ -122,49 +123,62 @@ template = "# {path}\n#\n{license}"
 license_spdx = "MIT"
 ```
 
-### 2. CLI Arguments & API
+### 2. CLI Arguments
 All configuration can be overridden via CLI arguments.
 
 | Argument | Description | Default |
 | :--- | :--- | :--- |
 | **Main Actions** | | |
 | `files` | Specific files to process (space separated). Scans root if empty. | (all) |
-| `-d`, `--dry-run` | Do not write changes. | `True` |
-| `-nd`, `--no-dry-run` | Apply changes to files. | `False` |
+| `-d`, `--dry-run` | Preview changes without writing. | `True` |
+| `-nd`, `--no-dry-run` | Apply changes to disk. | `False` |
 | `--override` | Force rewrite of existing headers. | `False` |
 | `--remove` | Remove all autoheader lines from files. | `False` |
-| **CI / Pre-commit** | | |
-| `--check` | Exit code 1 if changes are needed (for CI). | `False` |
-| `--check-hash` | Verify integrity via content hash. | `False` |
-| `--install-precommit` | Install as a `repo: local` pre-commit hook. | `False` |
-| `--install-git-hook` | Install raw `.git/hooks/pre-commit` script. | `False` |
-| `--init` | Create default `autoheader.toml`. | `False` |
-| `--lsp` | Start LSP server. | `False` |
+| **CI / Integration** | | |
+| `--check` | Exit 1 if changes needed. | `False` |
+| `--check-hash` | Verify content integrity. | `False` |
+| `--install-precommit` | Install `pre-commit` hook. | `False` |
+| `--install-git-hook` | Install native `.git/hooks`. | `False` |
+| `--init` | Generate default config. | `False` |
+| `--lsp` | Start Language Server. | `False` |
 | **Configuration** | | |
-| `-y`, `--yes` | Auto-confirm all prompts. | `False` |
-| `--backup` | Create `.bak` files before writing. | `False` |
-| `--root` | Specify project root directory. | `cwd` |
-| `--workers` | Number of parallel workers. | `8` |
-| `--timeout` | File processing timeout (seconds). | `60.0` |
-| `--config-url` | Fetch config from a remote URL. | `None` |
-| `--clear-cache` | Clear internal cache. | `False` |
+| `--config-url` | Remote config URL. | `None` |
+| `--root` | Project root path. | `cwd` |
+| `--workers` | Parallel workers. | `8` |
+| `--timeout` | File processing timeout (s). | `60.0` |
+| `--clear-cache` | Reset internal cache. | `False` |
 | **Filtering** | | |
 | `--depth` | Max directory scan depth. | `None` |
-| `--exclude` | Extra globs to exclude (repeatable). | `[]` |
+| `--exclude` | Glob patterns to skip. | `[]` |
 | `--markers` | Project root markers. | `['.gitignore', ...]` |
 | **Header Customization** | | |
 | `--blank-lines-after` | Blank lines after header. | `1` |
 | **Output** | | |
+| `--format` | `default` or `sarif`. | `default` |
 | `-v`, `--verbose` | Increase verbosity. | `0` |
 | `-q`, `--quiet` | Suppress info output. | `False` |
 | `--no-color` | Disable colors. | `False` |
 | `--no-emoji` | Disable emojis. | `False` |
-| `--format` | Output format (`default`, `sarif`). | `default` |
 
-### 3. Environment Variables
+### 3. Python SDK
+You can use `autoheader` directly in your Python scripts.
+
+```python
+from autoheader import AutoHeader
+
+ah = AutoHeader(root=".")
+
+# Apply headers to all files
+results = ah.apply(dry_run=False)
+
+# Check compliance
+check_results = ah.check(["src/main.py"])
+```
+
+### 4. Environment Variables
 While `autoheader` primarily uses `autoheader.toml`, standard environment variables like `NO_COLOR=1` are respected.
 
-### 4. Inline Ignores
+### 5. Inline Ignores
 To skip a specific file without complex config, simply add this comment anywhere in the file:
 ```python
 # autoheader: ignore
@@ -174,25 +188,28 @@ To skip a specific file without complex config, simply add this comment anywhere
 
 ## 🏗️ Architecture
 
-`autoheader` is designed for modularity and speed.
+`autoheader` follows a strict Separation of Concerns.
 
 ```text
 src/autoheader/
-├── cli.py         # Entry Point: Parses args, handles modes (check, lsp, init)
-├── core.py        # Brain: Plans changes, diffs files, orchestrates execution
-├── config.py      # Config: Loads TOML (local/remote), merges defaults
-├── walker.py      # Eyes: Scans filesystem, respects .gitignore, finds root
-├── headerlogic.py # Logic: Parses headers, detects SPDX, handles comments
-├── ui.py          # Face: Renders Rich output, diffs, and progress bars
-└── lsp.py         # Server: Implements Language Server Protocol
+├── cli.py         # Entry Point: UI, args parsing, mode selection
+├── api.py         # The SDK: Official public API wrapper
+├── core.py        # Execution: File writing, diffing, safety checks
+├── planner.py     # The Brain: Pure business logic, decision making (PlanItem)
+├── config.py      # Config: TOML loading, merging, validation
+├── walker.py      # Discovery: File scanning, gitignore processing
+├── headerlogic.py # Parsing: Header detection, SPDX handling
+├── ui.py          # The Face: Rich output, visual diffs
+├── lsp.py         # Language Server: Real-time IDE integration
+└── hooks.py       # Integration: Native git hook installer
 ```
 
 **Core Flow:**
-1.  **Initialize**: `cli.py` starts, determines project root via `walker.py`.
-2.  **Configuration**: `config.py` loads `autoheader.toml` and merges CLI args.
-3.  **Discovery**: `walker.py` scans files, filtering by excluded globs and `.gitignore`.
-4.  **Planning**: `core.py` analyzes each file to create a `PlanItem` (Add, Override, Skip).
-5.  **Execution**: A `ThreadPoolExecutor` runs in parallel to apply changes (write files) safely.
+1.  **Initialize**: `cli.py` determines project root.
+2.  **Configuration**: `config.py` loads local/remote TOML.
+3.  **Discovery**: `walker.py` scans files, filtering by `exclude` and `.gitignore`.
+4.  **Planning**: `planner.py` analyzes files in parallel to create a `PlanItem` (Add, Override, Skip).
+5.  **Execution**: `core.py` executes the plan using a `ThreadPoolExecutor`, updating files safely.
 
 ---
 
@@ -200,13 +217,10 @@ src/autoheader/
 
 We are actively building the future of code standardization.
 
-*   ✅ **v9.0**: Native LSP Support, Pre-commit auto-installer, Rich CLI.
-*   🔜 **v10.0**:
-    *   **Native Git Hook Installer**: Zero-dependency hook installation.
-    *   **Enhanced SPDX**: Automatic license text generation from SPDX IDs.
-    *   **IDE Extensions**: Official VS Code / JetBrains plugins (wrapping the LSP).
+*   ✅ **v9.0**: Native LSP Support, Pre-commit auto-installer, Rich CLI, Official SDK, GitHub Action.
+*   ✅ **v10.0 (Pre-release)**: Native Git Hook Installer, SARIF reporting, Remote Configuration.
 
-Check `ROADMAP.md` for the full list.
+Check `ROADMAP.md` for the full list of future goals like Semantic License Analysis.
 
 ---
 
