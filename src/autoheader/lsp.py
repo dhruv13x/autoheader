@@ -33,6 +33,7 @@ except ImportError:
             QuickFix = "quickfix"
         class WorkspaceEdit: pass
         class TextEdit: pass
+        class Command: pass # Added for type hinting when pygls is not present
 
 from .core import plan_files
 from .models import RuntimeContext, LanguageConfig

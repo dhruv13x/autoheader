@@ -4,13 +4,15 @@ from unittest.mock import MagicMock, patch, ANY, PropertyMock
 import sys
 from pathlib import Path
 
-# Protocol V3: Mock External Systems
-# We need to mock pygls components to test logic without starting a real LS
-
-from autoheader.lsp import AutoHeaderServer
+from autoheader.lsp import AutoHeaderServer, HAS_PYGLS
 from autoheader.config import LanguageConfig
 from autoheader.models import PlanItem
 from autoheader.headerlogic import HeaderAnalysis
+
+pytestmark = pytest.mark.skipif(not HAS_PYGLS, reason="pygls not installed")
+
+# Protocol V3: Mock External Systems
+# We need to mock pygls components to test logic without starting a real LS
 
 # --- Fixtures ---
 
