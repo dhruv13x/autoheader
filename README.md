@@ -17,6 +17,7 @@
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![Ruff](https://img.shields.io/badge/linting-ruff-yellow.svg)](https://github.com/astral-sh/ruff)
 ![Security](https://img.shields.io/badge/security-CodeQL-blue.svg)
+![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg)
 
 <!-- Usage -->
 ![Downloads](https://img.shields.io/pypi/dm/autoheader.svg)
@@ -43,89 +44,63 @@
 
 ### Prerequisites
 - **Python 3.8+**
-- Basic understanding of your project structure (e.g., where `pyproject.toml` or `.git` lives).
+- Basic understanding of your project structure.
 
 ### Installation
-Install instantly via pip:
-
 ```bash
 pip install "autoheader[precommit]"
 ```
-> **Note:** The `[precommit]` extra is recommended for full feature support (like hook installation).
 
-### Usage Example
-Scan your project and verify what needs to change (Dry Run):
-
+### Run
 ```bash
-# 1. Initialize a default config
-autoheader --init
-
-# 2. Preview changes (Safe by default)
-autoheader
+# Initialize and dry-run
+autoheader --init && autoheader
 ```
 
-Apply the changes:
-
-```bash
-autoheader --no-dry-run
-```
-
-**What it does:**
-It transforms this:
+### Demo
 ```python
-import os
-def main(): pass
-```
-Into this:
-```python
-# src/utils/main.py
+# Copy-paste this into any file to see autoheader in action!
+# src/main.py (autoheader will add this line)
 
-import os
-def main(): pass
+import sys
+print("Hello World")
 ```
 
 ---
 
-## ✨ Key Features
+## ✨ Features
 
-*   **🌐 Polyglot Support**: **God Level**. Manages headers for Python, JavaScript, Go, CSS, and *any* other language via a simple TOML configuration.
-*   **🛡️ Pre-commit Integration**: **God Level**. Automatically enforce headers on every commit with `autoheader --check` or the built-in hook installer.
-*   **⚙️ Smart Setup**: **God Level**. Get started in seconds with `autoheader --init` to generate a battle-tested default configuration.
-*   **🧩 LSP Support**: **God Level**. Includes a Language Server (`autoheader --lsp`) for real-time diagnostics directly in your IDE.
+### Core
+*   **🌐 Polyglot Support**: Manages headers for Python, JavaScript, Go, CSS, and *any* other language via a simple TOML configuration.
+*   **⚙️ Smart Setup**: Get started in seconds with `autoheader --init` to generate a battle-tested default configuration.
+*   **🧩 LSP Support**: Includes a Language Server (`autoheader --lsp`) for real-time diagnostics directly in your IDE.
 *   **⚡ Rich UX**: Beautiful, modern output with emojis, progress bars, and visual diffs (powered by Rich).
 *   **🧠 Smart Copyright**: Automatically updates year ranges (e.g., 2020-2025) in existing headers instead of overwriting them.
-*   **🚀 Performance**: Supports passing specific files, parallel execution, and caching for blazing fast speed in CI pipelines.
-*   **📂 Team Configuration**: Centralize settings using `autoheader.toml` or a remote config URL (`--config-url`) to keep your team aligned.
 *   **💻 Official SDK**: Import `autoheader` in your own Python scripts (`from autoheader import AutoHeader`) for custom integrations.
+*   **📂 Team Configuration**: Centralize settings using `autoheader.toml` or a remote config URL (`--config-url`) to keep your team aligned.
+*   **📜 Native SPDX Support**: Easily use standard licenses (e.g., MIT, Apache-2.0) by setting `license_spdx` in your config.
+
+### Performance
+*   **🚀 Parallel Execution**: Supports passing specific files, parallel execution, and caching for blazing fast speed in CI pipelines.
+*   **Smart Filtering**: `.gitignore` aware, inline ignores (`autoheader: ignore`), and robust depth/exclusion controls.
+
+### Security
+*   **🛡️ Pre-commit Integration**: Automatically enforce headers on every commit with `autoheader --check` or the built-in hook installer.
 *   **🤖 GitHub Action**: Use the official action `uses: dhruv13x/autoheader@v1` to check headers in your CI/CD pipelines.
 *   **🤖 Auto-Installer**: Setup hooks instantly with `autoheader --install-precommit` or `autoheader --install-git-hook`.
 *   **🔍 SARIF Support**: Output results in SARIF format (`--format sarif`) for integration with GitHub Security and other scanning tools.
-*   **📜 Native SPDX Support**: Easily use standard licenses (e.g., MIT, Apache-2.0) by setting `license_spdx` in your config.
-*   **Smart Filtering**: `.gitignore` aware, inline ignores (`autoheader: ignore`), and robust depth/exclusion controls.
 
 ---
 
-## ⚙️ Configuration & Advanced Usage
+## 🛠️ Configuration
 
-### 1. The `autoheader.toml` File
-The primary way to configure `autoheader` is via the `autoheader.toml` file. Generate one with `autoheader --init`.
+### Environment Variables
+| Variable | Description | Default | Required |
+| :--- | :--- | :--- | :--- |
+| `NO_COLOR` | Disable colored output if set. | `None` | No |
+| `AUTOHEADER_CONFIG` | Path to configuration file. | `autoheader.toml` | No |
 
-```toml
-[general]
-workers = 8
-backup = false
-exclude = ["tests/fixtures/*"]
-
-[language.python]
-file_globs = ["*.py"]
-prefix = "# "
-template = "# {path}\n#\n{license}"
-license_spdx = "MIT"
-```
-
-### 2. CLI Arguments
-All configuration can be overridden via CLI arguments.
-
+### CLI Arguments
 | Argument | Description | Default |
 | :--- | :--- | :--- |
 | **Main Actions** | | |
@@ -160,7 +135,23 @@ All configuration can be overridden via CLI arguments.
 | `--no-color` | Disable colors. | `False` |
 | `--no-emoji` | Disable emojis. | `False` |
 
-### 3. Python SDK
+### The `autoheader.toml` File
+The primary way to configure `autoheader` is via the `autoheader.toml` file. Generate one with `autoheader --init`.
+
+```toml
+[general]
+workers = 8
+backup = false
+exclude = ["tests/fixtures/*"]
+
+[language.python]
+file_globs = ["*.py"]
+prefix = "# "
+template = "# {path}\n#\n{license}"
+license_spdx = "MIT"
+```
+
+### Python SDK
 You can use `autoheader` directly in your Python scripts.
 
 ```python
@@ -173,15 +164,6 @@ results = ah.apply(dry_run=False)
 
 # Check compliance
 check_results = ah.check(["src/main.py"])
-```
-
-### 4. Environment Variables
-While `autoheader` primarily uses `autoheader.toml`, standard environment variables like `NO_COLOR=1` are respected.
-
-### 5. Inline Ignores
-To skip a specific file without complex config, simply add this comment anywhere in the file:
-```python
-# autoheader: ignore
 ```
 
 ---
@@ -204,12 +186,41 @@ src/autoheader/
 └── hooks.py       # Integration: Native git hook installer
 ```
 
-**Core Flow:**
-1.  **Initialize**: `cli.py` determines project root.
-2.  **Configuration**: `config.py` loads local/remote TOML.
-3.  **Discovery**: `walker.py` scans files, filtering by `exclude` and `.gitignore`.
-4.  **Planning**: `planner.py` analyzes files in parallel to create a `PlanItem` (Add, Override, Skip).
-5.  **Execution**: `core.py` executes the plan using a `ThreadPoolExecutor`, updating files safely.
+**Flow:**
+1.  **Input**: User runs CLI or SDK, providing target files and flags.
+2.  **Discovery**: `walker.py` scans the file system, respecting `.gitignore` and `exclude` rules.
+3.  **Planning**: `planner.py` evaluates each file in parallel against the configuration to determine the necessary action (Add, Override, Skip).
+4.  **Execution**: `core.py` applies the plan, modifying files safely with optional backups.
+5.  **Output**: `ui.py` renders the results to the console (or SARIF) with rich feedback.
+
+---
+
+## 🐞 Troubleshooting
+
+| Issue | Solution |
+| :--- | :--- |
+| **"Header not updating"** | Check if file is excluded in `.gitignore` or via `exclude` in `autoheader.toml`. |
+| **"Permission denied"** | Ensure you have write permissions to the files. Run with `sudo` only if necessary. |
+| **"LSP not working"** | Ensure `autoheader[lsp]` is installed. Restart your IDE language server. |
+| **"Config not found"** | Run `autoheader --init` to create `autoheader.toml`. |
+| **"Wrong path in header"** | Check your root directory setting (`--root`). |
+
+**Debug Mode**:
+Run with `autoheader -vv` to see detailed debug logs, including file scanning decisions and configuration loading.
+
+---
+
+## 🤝 Contributing
+
+**Contributions are welcome!**
+
+Please refer to our contribution guidelines below (full `CONTRIBUTING.md` coming soon).
+
+1.  Fork the repository.
+2.  Clone your fork: `git clone ...`
+3.  Install dev dependencies: `pip install -e ".[dev,precommit]"`
+4.  Run tests: `pytest`
+5.  Linting: `ruff check .`
 
 ---
 
@@ -223,13 +234,5 @@ We are actively building the future of code standardization.
 Check `ROADMAP.md` for the full list of future goals like Semantic License Analysis.
 
 ---
-
-## 🤝 Contributing & License
-
-**Contributions are welcome!**
-1.  Fork the repository.
-2.  Clone: `git clone ...`
-3.  Install dev deps: `pip install -e ".[dev,precommit]"`
-4.  Run tests: `pytest`
 
 **License**: MIT © dhruv13x
