@@ -233,6 +233,12 @@ def main(argv: List[str] | None = None) -> int:
     print_logo() # Print logo unconditionally at the start
     parser = build_parser()
 
+    # If run without any flags or files, show help and exit
+    args_list = argv if argv is not None else sys.argv[1:]
+    if not args_list:
+        parser.print_help()
+        return 0
+
     # --- MODIFIED: Config Loading ---
     temp_args, remaining_argv = parser.parse_known_args(argv)
     root: Path = temp_args.root.resolve()
